@@ -104,14 +104,14 @@ module usb_phy #(
 				.B(pad_dp),
 				.I(tx_dp)
 			);
-			TRELLIS_IO #(
-				.DIR("BIDIR")
-			) io_dn_I (
-				.O(rx_dn_in),
-				.T(!tx_en),
-				.B(pad_dn),
-				.I(tx_dn)
-			);
+			// TRELLIS_IO #(
+			// 	.DIR("BIDIR")
+			// ) io_dn_I (
+			// 	.O(rx_dn_in),
+			// 	.T(!tx_en),
+			// 	.B(pad_dn),
+			// 	.I(tx_dn)
+			// );
 			always @(posedge clk) begin
 				rx_dp_in_l[0] <= rx_dp_in;
 				rx_dn_in_l[0] <= rx_dn_in;

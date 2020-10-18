@@ -54,14 +54,14 @@ module soc(
 		input lcd_fmark,
 		output lcd_blen,
 
-		// PSRAM chips
-		inout wire [3:0] psrama_sio,
-		inout wire psrama_nce,
-		inout wire psrama_sclk,
+		// // PSRAM chips
+		// inout wire [3:0] psrama_sio,
+		// inout wire psrama_nce,
+		// inout wire psrama_sclk,
 
-		inout wire [3:0] psramb_sio,
-		inout wire psramb_nce,
-		inout wire psramb_sclk,
+		// inout wire [3:0] psramb_sio,
+		// inout wire psramb_nce,
+		// inout wire psramb_sclk,
 
 		output flash_nce,
 		output flash_selected,
@@ -92,8 +92,8 @@ module soc(
 		output usb_pu,
 		input usb_vdet,
 
-		output adcrefout,
-		input adc4,
+		// output adcrefout,
+		// input adc4,
 
 		input [29:0] genio_in,
 		output reg [29:0] genio_out,
@@ -514,15 +514,18 @@ module soc(
 	assign mem_ready = ram_ready || uart_ready || irda_ready || misc_select ||
 			lcd_ready || linerenderer_ready || usb_ready || pic_ready || audio_ready || psram_ready ||| bus_error;
 
-	dsadc dsadc (
-		.clk(clk48m),
-		.rst(rst || !adc_enabled),
-		.difpin(adc4),
-		.divider(adc_divider),
-		.refout(adcrefout),
-		.adcval(adc_value),
-		.valid(adc_valid)
-	);
+	// dsadc dsadc (
+	// 	.clk(clk48m),
+	// 	.rst(rst || !adc_enabled),
+	// 	.difpin(adc4),
+	// 	.divider(adc_divider),
+	// 	.refout(adcrefout),
+	// 	.adcval(adc_value),
+	// 	.valid(adc_valid)
+	// );
+
+
+	assign adc_value = 16'hE8B9; // ~= (3/3.3) * (16'hFFFF)
 
 	wire [19:0] vidmem_addr;
 	wire [23:0] vidmem_data_out;
@@ -812,72 +815,72 @@ module soc(
 	assign `SLICE_32(qpimem_arb_wdata, 1) = 0;
 
 
-	// PSRAM QPI interface
-	// -------------------
+	// // PSRAM QPI interface
+	// // -------------------
 
-	// Signals
-	wire [15:0] psram_io_i;
-	wire [15:0] psram_io_o;
-	wire [ 7:0] psram_io_t;
-	wire [1:0] psram_sck_o;
-	wire psram_cs_o;
+	// // Signals
+	// wire [15:0] psram_io_i;
+	// wire [15:0] psram_io_o;
+	// wire [ 7:0] psram_io_t;
+	// wire [1:0] psram_sck_o;
+	// wire psram_cs_o;
 
-	// Controller
-	qpimem_iface_2x2w qpi_psram_I (
-		.spi_io_i(psram_io_i),
-		.spi_io_o(psram_io_o),
-		.spi_io_t(psram_io_t),
-		.spi_sck_o(psram_sck_o),
-		.spi_cs_o(psram_cs_o),
-		.qpi_do_read(qpi_do_read),
-		.qpi_do_write(qpi_do_write),
-		.qpi_addr({1'b0, qpi_addr[23:2], 1'b0}),
-		.qpi_is_idle(qpi_is_idle),
-		.qpi_wdata(qpi_wdata),
-		.qpi_rdata(qpi_rdata),
-		.qpi_next_word(qpi_next_word),
-		.bus_addr(mem_addr[5:2]),
-		.bus_wdata(mem_wdata),
-		.bus_rdata(psram_rdata),
-		.bus_cyc(psram_select),
-		.bus_ack(psram_ready),
-		.bus_we(mem_wstrb != 0),
-		.clk(clk48m),
-		.rst(rst)
-	);
+	// // Controller
+	// qpimem_iface_2x2w qpi_psram_I (
+	// 	.spi_io_i(psram_io_i),
+	// 	.spi_io_o(psram_io_o),
+	// 	.spi_io_t(psram_io_t),
+	// 	.spi_sck_o(psram_sck_o),
+	// 	.spi_cs_o(psram_cs_o),
+	// 	.qpi_do_read(qpi_do_read),
+	// 	.qpi_do_write(qpi_do_write),
+	// 	.qpi_addr({1'b0, qpi_addr[23:2], 1'b0}),
+	// 	.qpi_is_idle(qpi_is_idle),
+	// 	.qpi_wdata(qpi_wdata),
+	// 	.qpi_rdata(qpi_rdata),
+	// 	.qpi_next_word(qpi_next_word),
+	// 	.bus_addr(mem_addr[5:2]),
+	// 	.bus_wdata(mem_wdata),
+	// 	.bus_rdata(psram_rdata),
+	// 	.bus_cyc(psram_select),
+	// 	.bus_ack(psram_ready),
+	// 	.bus_we(mem_wstrb != 0),
+	// 	.clk(clk48m),
+	// 	.rst(rst)
+	// );
 
-	// PHY
-	qspi_phy_2x_ecp5 #(
-		.N_CS(1)
-	) qspi_phy_psrama_I (
-		.spi_io(psrama_sio),
-		.spi_cs(psrama_nce),
-		.spi_sck(psrama_sclk),
-		.spi_io_i(psram_io_i[7:0]),
-		.spi_io_o(psram_io_o[7:0]),
-		.spi_io_t(psram_io_t[3:0]),
-		.spi_sck_o(psram_sck_o),
-		.spi_cs_o(psram_cs_o),
-		.clk_1x(clk48m),
-		.clk_2x(clk96m),
-		.rst(rst)
-	);
+	// // PHY
+	// qspi_phy_2x_ecp5 #(
+	// 	.N_CS(1)
+	// ) qspi_phy_psrama_I (
+	// 	.spi_io(psrama_sio),
+	// 	.spi_cs(psrama_nce),
+	// 	.spi_sck(psrama_sclk),
+	// 	.spi_io_i(psram_io_i[7:0]),
+	// 	.spi_io_o(psram_io_o[7:0]),
+	// 	.spi_io_t(psram_io_t[3:0]),
+	// 	.spi_sck_o(psram_sck_o),
+	// 	.spi_cs_o(psram_cs_o),
+	// 	.clk_1x(clk48m),
+	// 	.clk_2x(clk96m),
+	// 	.rst(rst)
+	// );
 
-	qspi_phy_2x_ecp5 #(
-		.N_CS(1)
-	) qspi_phy_psramb_I (
-		.spi_io(psramb_sio),
-		.spi_cs(psramb_nce),
-		.spi_sck(psramb_sclk),
-		.spi_io_i(psram_io_i[15:8]),
-		.spi_io_o(psram_io_o[15:8]),
-		.spi_io_t(psram_io_t[7:4]),
-		.spi_sck_o(psram_sck_o),
-		.spi_cs_o(psram_cs_o),
-		.clk_1x(clk48m),
-		.clk_2x(clk96m),
-		.rst(rst)
-	);
+	// qspi_phy_2x_ecp5 #(
+	// 	.N_CS(1)
+	// ) qspi_phy_psramb_I (
+	// 	.spi_io(psramb_sio),
+	// 	.spi_cs(psramb_nce),
+	// 	.spi_sck(psramb_sclk),
+	// 	.spi_io_i(psram_io_i[15:8]),
+	// 	.spi_io_o(psram_io_o[15:8]),
+	// 	.spi_io_t(psram_io_t[7:4]),
+	// 	.spi_sck_o(psram_sck_o),
+	// 	.spi_cs_o(psram_cs_o),
+	// 	.clk_1x(clk48m),
+	// 	.clk_2x(clk96m),
+	// 	.rst(rst)
+	// );
 
 
 	// Flash interface

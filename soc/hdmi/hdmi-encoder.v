@@ -1,5 +1,5 @@
 module hdmi_encoder (
-	input clk_8m,
+	input clk_in,
 	output [3:0] gpdi_dp, gpdi_dn,
 	
 	output pixelclk,
@@ -17,7 +17,7 @@ module hdmi_encoder (
 	wire clk_250MHz, clk_125MHz, clk_25MHz, clk_locked;
 	clk_8_250_125_25
 	clock_instance (
-		.clki(clk_8m),
+		.clki(clk_in),
 		.clko(clk_250MHz),
 		.clks1(clk_125MHz),
 		.clks2(clk_25MHz),

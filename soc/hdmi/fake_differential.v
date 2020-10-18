@@ -42,15 +42,15 @@ module fake_differential
             .SCLK(clk_shift),
             .RST(0)
           );
-          ODDRX1F
-          ddr_n_instance
-          (
-            .D0(R_tmds_n[i][0]),
-            .D1(R_tmds_n[i][1]),
-            .Q(out_n[i]),
-            .SCLK(clk_shift),
-            .RST(0)
-          );
+          // ODDRX1F
+          // ddr_n_instance
+          // (
+          //   .D0(R_tmds_n[i][0]),
+          //   .D1(R_tmds_n[i][1]),
+          //   .Q(out_n[i]),
+          //   .SCLK(clk_shift),
+          //   .RST(0)
+          // );
         end
       else
         for(i = 0; i < 4; i++)

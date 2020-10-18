@@ -5,7 +5,7 @@ BADGE_VER ?= 4
 PROJ=soc
 #Seed for nextpnr. Change this to another random value if you happen to run 
 #into a situation that mis-synths or takes extremely long to synth the SoC.
-SEED = 37
+SEED = 39
 
 # Sources
 	# Base
@@ -23,8 +23,8 @@ SRC = \
 SRC_SYNTH = \
 	mul_18x18_ecp5.v \
 	rng.v \
-	sysmgr.v \
-	top_fpga.v \
+	sysmgr_ulx3s.v \
+	top_ulx3s.v \
 	$(NULL)
 
 SRC_SIM = \
@@ -56,6 +56,8 @@ SRC += $(addprefix qpi_cache/, \
 	qspi_phy_2x_ecp5.v \
 	simple_mem.v \
 	simple_mem_words.v \
+	wbsdram.v \
+	qpi_sdram_adapter.v \
 )
 
 	# Video
@@ -155,7 +157,8 @@ SRC_SYNTH += $(addprefix hdmi/, \
 
 EXTRA_DEPEND=rom_random_seeds0x123456.hex
 BRAMFILE=rom.hex
-CONSTR=$(word $(BADGE_VER), had19_proto1.lpf had19_proto2.lpf had19_proto3.lpf had19_prod.lpf)
+# CONSTR=$(word $(BADGE_VER), had19_proto1.lpf had19_proto2.lpf had19_proto3.lpf had19_prod.lpf)
+CONSTR=ulx3s_v20.lpf
 HWDEF=$(word $(BADGE_VER), BADGE_V1 BADGE_V2 BADGE_V3 BADGE_PROD)
 TRELLIS=/usr/share/trellis
 
@@ -180,10 +183,10 @@ all: $(PROJ).svf
 $(PROJ).json $(PROJ).blif: $(SRC) $(SRC_SYNTH) $(EXTRA_DEPEND)
 	yosys$(EXE) -e ".*(assigned|implicitly).*" -l yosys.log \
 		-p "read -sv -DBADGE_VER=$(BADGE_VER) -D$(HWDEF)=1 $(SRC) $(SRC_SYNTH); \
-			synth_ecp5 -abc9 -top top_fpga -json $(PROJ).json -blif $(PROJ).blif"
+			synth_ecp5 -abc9 -top top_ulx3s -json $(PROJ).json -blif $(PROJ).blif"
 
 %_out_synth.config: %.json clock-constraints.py
-	nextpnr-ecp5$(EXE) --json $< --lpf $(CONSTR) --textcfg $@ --45k --package CABGA381 --speed 8 \
+	nextpnr-ecp5$(EXE) --json $< --lpf $(CONSTR) --textcfg $@ --85k --package CABGA381 --speed 8 \
 			--pre-pack clock-constraints.py -l nextpnr.log --freq 48 --seed $(SEED)
 
 %_out.config: %_out_synth.config rom.hex
