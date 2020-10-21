@@ -814,7 +814,58 @@ module soc(
 	assign qpimem_arb_do_write[1] = 0;
 	assign `SLICE_32(qpimem_arb_wdata, 1) = 0;
 
+	// Controller
+	qpi_sdram_adapter qpi_sdram_adapter_I (
+		.qpi_do_read(qpi_do_read),
+		.qpi_do_write(qpi_do_write),
+		.qpi_addr({1'b0, qpi_addr[23:2], 1'b0}),
+		.qpi_is_idle(qpi_is_idle),
+		.qpi_wdata(qpi_wdata),
+		.qpi_rdata(qpi_rdata),
+		.qpi_next_word(qpi_next_word),
+		.clk(clk48m),
+		.rst(rst)
+	);
 
+	// point-to-point wishbone bus
+	wire sdram_wb_cyc;
+	wire sdram_wb_stb;
+	wire sdram_wb_we;
+	wire sdram_wb_addr;
+	wire sdram_wb_data_ctl_out_sdram_in;
+	wire sdram_wb_data_ctl_in_sdram_out;
+	wire sdram_wb_sel;
+	wire sdram_wb_ack;
+	wire sdram_wb_stall;
+
+	// wishbone sdram controller
+	wbsdram wbsdram_I(
+		.i_clk(clk48m),
+		.i_wb_cyc(sdram_wb_cyc),
+		.i_wb_stb(sdram_wb_stb),
+		.i_wb_we(sdram_wb_we),
+		.i_wb_addr(sdram_wb_addr),
+		.i_wb_sel(sdram_wb_sel),
+		.o_wb_ack(sdram_wb_ack),
+		.o_wb_stall(sdram_wb_stall),
+		.i_wb_data(sdram_wb_data_ctl_out_sdram_in),
+		.o_wb_data(sdram_wb_data_ctl_in_sdram_out),
+
+		.o_ram_cs_n(),
+		.o_ram_cke(),
+		.o_ram_ras_n(),
+		.o_ram_cas_n(),
+		.o_ram_we_n(),
+		.o_ram_bs(),
+		.o_ram_addr(),
+		.o_ram_dmod(),
+		.i_ram_data(),
+		.o_ram_data(),
+		.o_ram_dqm(),
+		.o_debug(),
+		);
+	
+	
 	// // PSRAM QPI interface
 	// // -------------------
 

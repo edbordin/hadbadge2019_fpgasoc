@@ -104,6 +104,7 @@ module	wbsdram(i_clk,
 	//	 88 MHz		687
 	//	 84 MHz		656
 	//	 80 MHz		625
+	//   48 MHz     375
 	//
 	// However, since we do two refresh cycles everytime we need a refresh,
 	// this standard is close to overkill--but we'll use it anyway.  At
@@ -119,7 +120,8 @@ module	wbsdram(i_clk,
 	always @(posedge i_clk)
 	begin
 		if (refresh_cmd)
-			refresh_clk <= 10'd625; // Make suitable for 80 MHz clk
+			refresh_clk <= 10'd375; // Make suitable for 48 MHz clk
+			// refresh_clk <= 10'd625; // Make suitable for 80 MHz clk
 		else if (|refresh_clk)
 			refresh_clk <= refresh_clk - 10'h1;
 	end
