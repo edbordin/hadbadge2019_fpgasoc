@@ -108,7 +108,20 @@ module soc(
 		output reg [7:0] pmod_out,
 		output reg [7:0] pmod_oe,
 		
-		output reg trace_en
+		output reg trace_en,
+
+		output sdram_clk,
+		output sdram_cke,
+		output sdram_csn,
+		output sdram_wen,
+		output sdram_rasn,
+		output sdram_casn,
+		output [12:0] sdram_a,
+		output [1:0] sdram_ba,
+		output [1:0] sdram_dqm,
+		output sdram_d_oe,
+		output [15:0] sdram_d_out,
+		output [15:0] sdram_d_in,
 	);
 
 
@@ -851,20 +864,21 @@ module soc(
 		.i_wb_data(sdram_wb_data_ctl_out_sdram_in),
 		.o_wb_data(sdram_wb_data_ctl_in_sdram_out),
 
-		.o_ram_cs_n(),
-		.o_ram_cke(),
-		.o_ram_ras_n(),
-		.o_ram_cas_n(),
-		.o_ram_we_n(),
-		.o_ram_bs(),
-		.o_ram_addr(),
-		.o_ram_dmod(),
-		.i_ram_data(),
-		.o_ram_data(),
-		.o_ram_dqm(),
+		.o_ram_cs_n(sdram_csn),
+		.o_ram_cke(sdram_cke),
+		.o_ram_ras_n(sdram_rasn),
+		.o_ram_cas_n(sdram_casn),
+		.o_ram_we_n(sdram_wen),
+		.o_ram_bs(sdram_ba), // bank select == bank address
+		.o_ram_addr(sdram_a),
+		.o_ram_dmod(sdram_d_oe), // o_ram_drive_data aka o_ram_data_oe
+		.i_ram_data(sdram_d_in),
+		.o_ram_data(sdram_d_out),
+		.o_ram_dqm(sdram_dqm),
 		.o_debug(),
 		);
-	
+
+		assign sdram_clk = clk48m;
 	
 	// // PSRAM QPI interface
 	// // -------------------

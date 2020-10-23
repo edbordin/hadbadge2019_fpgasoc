@@ -98,6 +98,7 @@ qpimem_iface qpimem_iface(
 	.do_spi_xfer(do_spi_xfer),
 	.spi_xfer_claim(spi_xfer_claim),
 	.spi_xfer_idle(spi_xfer_idle),
+	.spi_selected(),
 
 	.spi_clk(spi_clk),
 	.spi_ncs(spi_ncs),

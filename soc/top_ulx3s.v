@@ -126,6 +126,17 @@ module top_ulx3s(
 
 		// output adcrefout,
 		// input adcref4
+
+		output sdram_clk,
+		output sdram_cke,
+		output sdram_csn,
+		output sdram_wen,
+		output sdram_rasn,
+		output sdram_casn,
+		output [12:0] sdram_a,
+		output [1:0] sdram_ba,
+		output [1:0] sdram_dqm,
+		inout [15:0] sdram_d,
 	);
 
 	wire pwmout;
@@ -312,7 +323,20 @@ module top_ulx3s(
 		.sao2_oe(),
 		.pmod_in(),
 		.pmod_out(),
-		.pmod_oe()
+		.pmod_oe(),
+
+		.sdram_clk(sdram_clk),
+		.sdram_cke(sdram_cke),
+		.sdram_csn(sdram_csn),
+		.sdram_wen(sdram_wen),
+		.sdram_rasn(sdram_rasn),
+		.sdram_casn(sdram_casn),
+		.sdram_a(sdram_a),
+		.sdram_ba(sdram_ba),
+		.sdram_dqm(sdram_dqm),
+		.sdram_d_oe(sdram_d_oe),
+		.sdram_d_out(sdram_d_out),
+		.sdram_d_in(sdram_d_in),
 	);
 
 	sysmgr sysmgr_I (
@@ -355,6 +379,16 @@ module top_ulx3s(
 		TRELLIS_IO #(.DIR("BIDIR")) genio_tristate[i] (.B(gp[i/2]), .I(genio_out[i]), .O(genio_in[i]), .T(!genio_oe[i]));
 		TRELLIS_IO #(.DIR("BIDIR")) genio_tristate[i+1] (.B(gn[i/2+1]), .I(genio_out[i+1]), .O(genio_in[i+1]), .T(!genio_oe[i+1]));
 	end
+
+	wire [15:0] sdram_d_in;
+	wire [15:0] sdram_d_out;
+	wire sdram_d_oe;
+	for (i=0; i<16; i+=1) begin
+		TRELLIS_IO #(.DIR("BIDIR")) genio_tristate[i] (.B(sdram_d[i]), .I(sdram_d_out[i]), .O(sdram_d_in[i]), .T(!sdram_d_oe));
+	end
+	// sdram_d
+	// sdram_d_in
+		// sdram_d_in
 
 
 	// for (i=0; i<6; i++) begin

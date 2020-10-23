@@ -1,6 +1,6 @@
 module qpi_sdram_adapter #(
 	parameter integer AW = 23,
-	parameter integer DW=32
+	parameter integer DW = 32
 )(
 
 	// QPI memory interface
@@ -11,7 +11,7 @@ module qpi_sdram_adapter #(
 
     input  wire [31:0] qpi_wdata,
     output wire [31:0] qpi_rdata,
-    output wire qpi_next_word,
+    output qpi_next_word,
 
 	// // Wishbone interface for CSRs
 	// input  wire [ 3:0] bus_addr,
@@ -21,17 +21,17 @@ module qpi_sdram_adapter #(
 	// output wire bus_ack,
 	// input  wire bus_we,
 
-	// Wishbone interface for sdram controller
-
-	input i_wb_cyc,
-	input i_wb_stb,
-	input i_wb_we,
-	input [(AW-1):0] i_wb_addr,
+	// Wishbone master for sdram controller
+	output o_wb_cyc,
+	output o_wb_stb,
+	output o_wb_we,
+	output [(AW-1):0] o_wb_addr,
 	
-	input [(DW/8-1):0] i_wb_sel,
-	output o_wb_ack,
-	output o_wb_stall,
-	inout [(DW-1):0] wb_data,
+	output [(DW/8-1):0] o_wb_sel,
+	input i_wb_ack,
+	input i_wb_stall,
+	input [(DW-1):0] i_wb_data,
+	output [(DW-1):0] o_wb_data,
 
 	// Clock
 	input  wire clk,
@@ -39,15 +39,54 @@ module qpi_sdram_adapter #(
 	input  wire rst
 );
 
-	// Wishbone
-	//	inputs
-	input	wire			i_wb_cyc, i_wb_stb, i_wb_we;
-	input	wire	[(AW-1):0]	i_wb_addr;
-	input	wire	[(DW-1):0]	i_wb_data;
-	input	wire	[(DW/8-1):0]	i_wb_sel;
-	//	outputs
-	output	wire		o_wb_ack;
-	output	reg		o_wb_stall;
-	output	wire [31:0]	o_wb_data;
+	localparam
+		ST_IDLE = 0,
+		ST_WAIT_STALL = 1,
+		ST_BEGIN_TXN = 2,
+		ST_WAIT_ACK = 3;
+
+	assign qpi_is_idle = (state == ST_IDLE) && !qpi_do_read && !qpi_do_write;
+	assign qpi_next_word = (state == ST_IDLE);
+
+	// Main Control FSM
+	reg  [ 3:0] state;
+	reg  [ 3:0] state_nxt;
+
+	// State register
+	always @(posedge clk)
+		if (rst)
+			state <= ST_IDLE;
+		else
+			state <= state_nxt;
+
+	// Next-State logic
+	always @(*)
+	begin
+		// Default is to stay put
+		state_nxt = state;
+
+		// Transition?
+		case (state)
+			ST_IDLE:
+				if (qpi_do_read | qpi_do_write)
+					if (~i_wb_stall) begin
+						state_nxt = ST_BEGIN_TXN;
+					end else begin
+						state_nxt = ST_WAIT_STALL;
+					end
+
+
+			ST_BEGIN_TXN:
+				if (~i_wb_stall) begin
+					state_nxt = ST_WAIT_ACK;
+
+
+				end
+
+			ST_WAIT_ACK:
+				if (i_wb_ack)
+					state_nxt = ST_IDLE;
+		endcase
+	end
 
 endmodule
