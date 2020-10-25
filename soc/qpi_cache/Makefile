@@ -1,6 +1,6 @@
 qpimem_iface_testbench:
-	iverilog -g2009 -o qpimem_iface_testbench.vvp qpimem_iface_testbench.v qpimem_iface.v ly68l6400_model.v \
-	../sim/ecp5_io_sim.v
+	iverilog -g2009 -o qpimem_iface_testbench.vvp ../sim/ecp5_io_sim.v qpimem_iface_testbench.v qpimem_iface.v ly68l6400_model.v \
+		sim_mt48lc16m16a2.v qpi_sdram_adapter.v wbsdram.v
 	vvp qpimem_iface_testbench.vvp
 
 qpimem_interleave_testbench:

@@ -24,7 +24,7 @@
 *                IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR
 *                A PARTICULAR PURPOSE, OR AGAINST INFRINGEMENT.
 *
-*                Copyright © 2001 Micron Semiconductor Products, Inc.
+*                Copyright ï¿½ 2001 Micron Semiconductor Products, Inc.
 *                All rights researved
 *
 * Rev  Author          Date        Changes
@@ -37,8 +37,8 @@
 *
 **************************************************************************/
 
-`include "timescale.v"
-`include "test-defines.v"
+// `include "timescale.v"
+// `include "test-defines.v"
 
 // Uncomment one of the following to have the appropriate size definitions
 // for the part.

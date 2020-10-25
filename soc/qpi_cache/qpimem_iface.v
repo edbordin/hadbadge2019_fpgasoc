@@ -118,7 +118,7 @@ reg [3:0] spi_sout_u;
 reg [3:0] spi_sin_r;
 reg spi_bus_qpi_u, spi_oe_u;
 
-OFS1P3DX oreg_cs(.D(spi_ncs_u), .SP(1), .SCLK(clk), .CD(rst), .Q(spi_ncs));
+OFS1P3DX oreg_cs(.D(spi_ncs_u), .SP(1'b1), .SCLK(clk), .CD(rst), .Q(spi_ncs));
 genvar i;
 generate
 	for (i=0; i<4; i = i + 1) begin

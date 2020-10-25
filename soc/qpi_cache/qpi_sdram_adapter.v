@@ -6,7 +6,7 @@ module qpi_sdram_adapter #(
 	// QPI memory interface
     input  wire qpi_do_read,
     input  wire qpi_do_write,
-    input  wire [23:0] qpi_addr,
+    input  wire [24:0] qpi_addr,
     output wire qpi_is_idle,
 
     input  wire [31:0] qpi_wdata,

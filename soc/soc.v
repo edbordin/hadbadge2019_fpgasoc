@@ -836,6 +836,17 @@ module soc(
 		.qpi_wdata(qpi_wdata),
 		.qpi_rdata(qpi_rdata),
 		.qpi_next_word(qpi_next_word),
+
+		.o_wb_cyc(sdram_wb_cyc),
+		.o_wb_stb(sdram_wb_stb),
+		.o_wb_we(sdram_wb_we),
+		.o_wb_addr(sdram_wb_addr),
+		.o_wb_sel(sdram_wb_sel),
+		.i_wb_ack(sdram_wb_ack),
+		.i_wb_stall(sdram_wb_stall),
+		.i_wb_data(sdram_wb_data_ctl_in_sdram_out),
+		.o_wb_data(sdram_wb_data_ctl_out_sdram_in),
+
 		.clk(clk48m),
 		.rst(rst)
 	);
