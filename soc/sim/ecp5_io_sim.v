@@ -1,3 +1,5 @@
+`default_nettype none
+
 module TRELLIS_IO #(
 	parameter DIR = "BIDIR"
 ) (
@@ -139,4 +141,4 @@ module IDDRX1F (
 		end
 	end
 
-endmodule;
+endmodule

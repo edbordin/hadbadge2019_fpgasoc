@@ -1,5 +1,6 @@
 qpimem_iface_testbench:
-	iverilog -o qpimem_iface_testbench.vvp qpimem_iface_testbench.v qpimem_iface.v ly68l6400_model.v
+	iverilog -g2009 -o qpimem_iface_testbench.vvp qpimem_iface_testbench.v qpimem_iface.v ly68l6400_model.v \
+	../sim/ecp5_io_sim.v
 	vvp qpimem_iface_testbench.vvp
 
 qpimem_interleave_testbench:
@@ -15,5 +16,5 @@ verilator: verilator-build/Vqpitest
 	./verilator-build/Vqpitest
 
 verilator-build/Vqpitest: qpimem_cache.v simple_mem.v simple_mem_words.v verilator_top.v verilator_main.cpp ../psram_emu.cpp
-	verilator -CFLAGS "-ggdb" --assert --trace --Mdir verilator-build -Wno-style -Wno-fatal -cc --top-module qpitest --exe $^
+	verilator -CFLAGS "-ggdb" --timescale-override "1ns/1ps" --assert --trace --Mdir verilator-build -Wno-style -Wno-fatal -cc --top-module qpitest --exe $^
 	make OPT_FAST="-O2 -fno-stack-protector" -C verilator-build -f Vqpitest.mk

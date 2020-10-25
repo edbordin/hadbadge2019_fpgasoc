@@ -28,6 +28,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+`default_nettype none
+
 module qpimem_cache #(
 	//Simple 2-way cache.
 	parameter integer CACHELINE_WORDS=16,

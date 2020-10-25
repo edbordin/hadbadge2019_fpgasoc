@@ -65,6 +65,8 @@ Wrt upgrading speed to 2x memory bus clock using a 2nd tap from the same PLL:
 
 */
 
+`default_nettype none
+
 module qpimem_iface #(
 	//ly68l6400:
 	parameter [7:0] READCMD = 'hEB,
@@ -118,10 +120,12 @@ reg spi_bus_qpi_u, spi_oe_u;
 
 OFS1P3DX oreg_cs(.D(spi_ncs_u), .SP(1), .SCLK(clk), .CD(rst), .Q(spi_ncs));
 genvar i;
-for (i=0; i<4; i++) begin
-	OFS1P3DX oreg_sout[i+1](.D(spi_sout_u[i]), .SP(1'b1), .SCLK(clk), .CD(rst), .Q(spi_sout[i]));
-	IFS1P3DX ireg_sin[i+1](.D(spi_sin[i]), .SP(1'b1), .SCLK(clk), .CD(rst), .Q(spi_sin_r[i]));
-end
+generate
+	for (i=0; i<4; i = i + 1) begin
+		OFS1P3DX oreg_sout[i+1](.D(spi_sout_u[i]), .SP(1'b1), .SCLK(clk), .CD(rst), .Q(spi_sout[i]));
+		IFS1P3DX ireg_sin[i+1](.D(spi_sin[i]), .SP(1'b1), .SCLK(clk), .CD(rst), .Q(spi_sin_r[i]));
+	end
+endgenerate
 
 reg clk_active;
 reg clk_active_r;
