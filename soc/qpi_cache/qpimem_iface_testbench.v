@@ -173,7 +173,45 @@ spiram spiram (
 		// vendor SDRAM model
 		`define MT48LC16M16
 
-		mt48lc16m16a2 sdram_I (
+		// // // Timing Parameters for -7E PC133 CL2
+		// parameter tAC  =   5.4;
+		// parameter tHZ  =   5.4;
+		// parameter tOH  =   3.0;
+		// parameter tMRD =   2.0;     // 2 Clk Cycles
+		// parameter tRAS =  37.0;
+		// parameter tRC  =  60.0;
+		// parameter tRCD =  15.0;
+		// parameter tRFC =  66.0;
+		// parameter tRP  =  15.0;
+		// parameter tRRD =  14.0;
+		// parameter tWRa =   7.0;     // A2 Version - Auto precharge mode (1 Clk + 7 ns)
+		// parameter tWRm =  14.0;     // A2 Version - Manual precharge mode (14 ns)
+
+		// crowdsupply ulx3s with IS42S16160G-7TL-TR SDRAM
+		// assuming CAS latency 3
+		// (Micron simulation model is an alternate compatible
+		// sdram chip used on other production runs)
+		mt48lc16m16a2 #(
+			// tAC  =   5.4,
+			// tHZ  =   5.4,
+			// tOH  =   2.7,
+			// tMRD =   14.0,
+			// tRAS =  37.0,
+			// tRC  =  60.0,
+			// tRCD =  15.0;
+			// // not certain I have got the right parameter here
+			// // I've used the value ISSI provides for tRC
+			// //tRFC = AUTO REFRESH period (Micron)
+			// //tRC = Command Period (ISSI):
+			// //The stipulated period(tRC) is required for a single refresh operation
+			// //and no other commands can be executed during this period
+			// tRFC =  60.0;
+			// tRP  =  15.0;
+
+			// tRRD =  14.0;
+			// tWRa =   7.0;     // A2 Version - Auto precharge mode (1 Clk + 7 ns)
+			// tWRm =  14.0;     // A2 Version - Manual precharge mode (14 ns)
+		) sdram_I (
 			.Dq(sdram_d_bd),
 			.Addr(sdram_a),
 			.Ba(sdram_ba),
