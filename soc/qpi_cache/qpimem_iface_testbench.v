@@ -51,7 +51,7 @@ reg do_spi_xfer;
 wire spi_xfer_idle;
 reg spi_xfer_claim;
 
-// `define USE_SDRAM
+`define USE_SDRAM
 
 `ifndef USE_SDRAM
 
@@ -261,11 +261,18 @@ initial begin
 	while (!is_idle) #Tclk;
 
 	addr <= 'h123456;
-	do_read <= 1;
+	#Tclk do_read <= 1;
 	while (!next_word) #Tclk;
+	#Tclk;
 	while (!next_word) #Tclk;
+	#Tclk;
 	while (!next_word) #Tclk;
-	do_read <= 0;
+	#Tclk;
+	while (!next_word) #Tclk;
+	#Tclk;
+	while (!next_word) #Tclk;
+	#Tclk;
+	#Tclk do_read <= 0;
 	while (!is_idle) #Tclk;
 
 	spi_xfer_claim <= 1;
@@ -278,7 +285,7 @@ initial begin
 	#Tclk do_spi_xfer <= 0;
 	spi_xfer_claim <= 0;
 
-	#(Tclk*10) $finish;
+	#(Tclk*100) $finish;
 end
 
 
