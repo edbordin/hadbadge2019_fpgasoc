@@ -26,9 +26,12 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-`timescale 1us/1ns
+`timescale 1ps/1ps
 
 module stimulus();
+
+parameter Tclk = 1e6/48; //20833.33; // 1/48MHz in ps
+parameter Tclk_half = Tclk/2;
 
 reg clk, rst;
 reg do_read, do_write;
@@ -48,7 +51,7 @@ reg do_spi_xfer;
 wire spi_xfer_idle;
 reg spi_xfer_claim;
 
-`define USE_SDRAM
+// `define USE_SDRAM
 
 `ifndef USE_SDRAM
 
@@ -114,6 +117,8 @@ spiram spiram (
 	wire [15:0] sdram_d_in;
 
 	wire [15:0] sdram_d_bd;
+
+	assign sdram_d_in = sdram_d_bd;
 	assign sdram_d_bd = sdram_d_oe ? sdram_d_out : 16'bZZZZZZZZ_ZZZZZZZZ;
 
 	// Controller
@@ -168,7 +173,7 @@ spiram spiram (
 		.o_debug()
 		);
 
-		
+		assign sdram_clk = clk;
 
 		// vendor SDRAM model
 		`define MT48LC16M16
@@ -227,7 +232,7 @@ spiram spiram (
 `endif //USE_SDRAM
 
 //clock toggle
-always #0.5 clk = !clk;
+always #Tclk_half clk = !clk;
 
 integer i;
 initial begin
@@ -243,37 +248,37 @@ initial begin
 	spi_xfer_claim <= 0;
 
 	rst = 1;
-	#5 rst = 0;
-	#5 addr <= 'h123456;
+	#(5*Tclk) rst = 0;
+	#(5*Tclk) addr <= 'h123456;
 	wdata <= 'h89ABCDEF;
 	do_write <= 1;
-	while (!next_word) #1;
-	wdata <= 'h11223344;
-	while (!next_word) #1;
-	wdata <= 'hF5667788;
-	while (!next_word) #1;
-	#1 do_write <= 0;
-	while (!is_idle) #1;
+	while (!next_word) #Tclk;
+	#Tclk wdata <= 'h11223344;
+	while (!next_word) #Tclk;
+	#Tclk wdata <= 'hF5667788;
+	while (!next_word) #Tclk;
+	#Tclk do_write <= 0;
+	while (!is_idle) #Tclk;
 
 	addr <= 'h123456;
 	do_read <= 1;
-	while (!next_word) #1;
-	while (!next_word) #1;
-	while (!next_word) #1;
+	while (!next_word) #Tclk;
+	while (!next_word) #Tclk;
+	while (!next_word) #Tclk;
 	do_read <= 0;
-	while (!is_idle) #1;
+	while (!is_idle) #Tclk;
 
 	spi_xfer_claim <= 1;
-	while (!spi_xfer_idle) #1;
+	while (!spi_xfer_idle) #Tclk;
 	do_spi_xfer <= 1;
-	#1 do_spi_xfer <= 0;
-	while (!spi_xfer_idle) #1;
+	#Tclk do_spi_xfer <= 0;
+	while (!spi_xfer_idle) #Tclk;
 	spi_xfer_wdata <= 'h55;
 	do_spi_xfer <= 1;
-	#1 do_spi_xfer <= 0;
+	#Tclk do_spi_xfer <= 0;
 	spi_xfer_claim <= 0;
 
-	#10 $finish;
+	#(Tclk*10) $finish;
 end
 
 

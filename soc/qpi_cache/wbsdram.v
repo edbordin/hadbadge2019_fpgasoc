@@ -62,7 +62,8 @@ module	wbsdram(i_clk,
 			o_ram_bs, o_ram_addr,
 			o_ram_dmod, i_ram_data, o_ram_data, o_ram_dqm,
 		o_debug);
-	parameter	RDLY = 6;
+	// parameter	RDLY = 6;
+	parameter	RDLY = 4;
 	parameter [0:0]	F_OPT_CLK2FFLOGIC = 1'b0;
 	localparam	AW=23, DW=32;
 	input	wire			i_clk;

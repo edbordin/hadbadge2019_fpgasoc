@@ -146,7 +146,7 @@ module mt48lc16m16a2 (Dq, Addr, Ba, Clk, Cke, Cs_n, Ras_n, Cas_n, We_n, Dqm);
     // Write Burst Mode
     wire      Write_burst_mode = Mode_reg[9];
 
-    wire      Debug            = 1'b0;                          // Debug messages : 1 = On
+    wire      Debug            = 1'b1;                          // Debug messages : 1 = On
     wire      Dq_chk           = Sys_clk & Data_in_enable;      // Check setup/hold time for DQ
     
     assign    Dq               = Dq_reg;                        // DQ buffer
@@ -201,7 +201,7 @@ module mt48lc16m16a2 (Dq, Addr, Ba, Clk, Cke, Cs_n, Ras_n, Cas_n, We_n, Dqm);
         RC_chk0 = 0; RC_chk1 = 0; RC_chk2 = 0; RC_chk3 = 0;
         RP_chk0 = 0; RP_chk1 = 0; RP_chk2 = 0; RP_chk3 = 0;
         $timeformat (-9, 1, " ns", 12);
-//`define INIT_CLEAR_MEM_BANKS       
+//`define INIT_CLEAR_MEM_BANKS
 `ifdef INIT_CLEAR_MEM_BANKS // Added, jb
        // Initialse the memory before we use it, clearing x's
        for(mem_cnt = 0; mem_cnt < mem_sizes; mem_cnt = mem_cnt + 1)
@@ -1149,7 +1149,7 @@ end
 	 else
 	   data = short[7:0];
 
-	 //$display("SDRAM addr 0x%0h, bank %0d, short 0x%0h, byte 0x%0h", addr, bank, short, data);
+	 $display("SDRAM GET addr 0x%0h, bank %0d, short 0x%0h, byte 0x%0h", addr, bank, short, data);
       end
    endtask // get_byte
 
@@ -1190,7 +1190,7 @@ end
 	   2'b11:
 	     Bank3[addr[22:1]] = short;
 	 endcase // case (bank)
-	 
+	 $display("SDRAM SET addr 0x%0h, bank %0d, short 0x%0h, byte 0x%0h", addr, bank, short, data);
       end
    endtask // set_byte
 
@@ -1215,6 +1215,7 @@ end
 	 endcase // case (bank)
 
 	 data = short;
+     $display("SDRAM GET_SHORT addr 0x%0h, bank %0d, short 0x%0h", addr, bank, short);
       end
    endtask // get_short
    
@@ -1236,6 +1237,8 @@ end
 	   2'b11:
 	     Bank3[addr[22:1]] = data;
 	 endcase // case (bank)
+
+     $display("SDRAM SET_SHORT addr 0x%0h, bank %0d, short 0x%0h", addr, bank, data);
       end
    endtask // set_short
    
