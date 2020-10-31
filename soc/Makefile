@@ -234,7 +234,7 @@ endif
 
 verilator-build/Vsoc: $(SRC) $(SRC_SIM) $(BRAMFILE)
 	verilator -Iusb -CFLAGS "-ggdb `sdl2-config --cflags` $(VR_TRACE_CFLAGS)" -LDFLAGS "`sdl2-config --libs`" --assert \
-			$(VR_TRACE_OPTS) --Mdir verilator-build -Wno-style -Wno-fatal -cc --top-module soc \
+			-Wno-TIMESCALEMOD --timescale-override "1us/1ps" $(VR_TRACE_OPTS) --Mdir verilator-build -Wno-style -Wno-fatal -cc --top-module soc \
 			-O3 --noassert --exe $(SRC) $(SRC_SIM)
 	$(MAKE) OPT_FAST="-O2 -fno-stack-protector" -C verilator-build -f Vsoc.mk
 

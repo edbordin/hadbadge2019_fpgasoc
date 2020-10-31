@@ -121,9 +121,8 @@ module soc(
 		output [1:0] sdram_dqm,
 		output sdram_d_oe,
 		output [15:0] sdram_d_out,
-		output [15:0] sdram_d_in,
+		output [15:0] sdram_d_in
 	);
-
 
 	reg fpga_reload=0;
 	assign programn = ~fpga_reload;
@@ -886,7 +885,7 @@ module soc(
 		.i_ram_data(sdram_d_in),
 		.o_ram_data(sdram_d_out),
 		.o_ram_dqm(sdram_dqm),
-		.o_debug(),
+		.o_debug()
 		);
 
 		assign sdram_clk = clk48m;

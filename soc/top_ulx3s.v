@@ -137,7 +137,21 @@ module top_ulx3s(
 		output [1:0] sdram_ba,
 		output [1:0] sdram_dqm,
 		inout [15:0] sdram_d,
+		inout wifi_en,
+		inout wifi_gpio0,
+		inout wifi_gpio2,
+		inout wifi_gpio5,
+		inout wifi_gpio16,
+		inout wifi_gpio17,
 	);
+
+	// 
+	assign wifi_en = 1'b1;
+	assign wifi_gpio0 = 1'b1;
+	assign wifi_gpio2 = 1'bZ;
+	assign wifi_gpio5 = 1'bZ;
+	assign wifi_gpio16 = 1'bZ;
+	assign wifi_gpio17 = 1'bZ;
 
 	wire pwmout;
 	assign audio_l = {pwmout,pwmout,pwmout,pwmout};

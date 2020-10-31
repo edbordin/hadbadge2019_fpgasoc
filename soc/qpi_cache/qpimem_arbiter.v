@@ -64,11 +64,7 @@ The connected masters are priority-encoded by index; higher index = higher prio.
 (round-robin, fractional priority, ...) but for now this is simple and stupid.
 */
 
-`ifdef verilator
-genvar i;
-`else
 integer i;
-`endif
 
 `define SLICE_32(v, i) v[32*i+:32]
 

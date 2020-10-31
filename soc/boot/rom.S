@@ -146,25 +146,25 @@ psram_init:
 	sw a1, MISC_LED_REG(a2)
 
 	// Load base offset
-	li a1, PSRAM_CMD_OFFSET
+	//li a1, PSRAM_CMD_OFFSET
 
 	// Request manual control
-	li a2, 2
-	sw a2, PSRAM_CMD_CSR(a1)
+	//li a2, 2
+	//sw a2, PSRAM_CMD_CSR(a1)
 
 	// Send single command
-	li a2, 0x3535
-	sw a2, PSRAM_CMD_SPI_WR_16B(a1)
+	//li a2, 0x3535
+	//sw a2, PSRAM_CMD_SPI_WR_16B(a1)
 
 	// Release manual control
-	li a2, 4
-	sw a2, PSRAM_CMD_CSR(a1)
+	//li a2, 4
+	//sw a2, PSRAM_CMD_CSR(a1)
 
 	// Wait for completion
-1:
-	lw a2, PSRAM_CMD_CSR(a1)
-	andi a2, a2, 16
-	beq zero, a2, 1b
+//1:
+	//lw a2, PSRAM_CMD_CSR(a1)
+	//andi a2, a2, 16
+	//beq zero, a2, 1b
 
 	// Flush cache to psram
 	li a1, MACH_FLUSH_REGION

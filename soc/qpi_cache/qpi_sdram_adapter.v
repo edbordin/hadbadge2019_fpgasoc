@@ -9,7 +9,7 @@ module qpi_sdram_adapter #(
     output wire qpi_is_idle,
 
     input  wire [31:0] qpi_wdata,
-    output reg [31:0] qpi_rdata,
+    output [31:0] qpi_rdata,
     output reg qpi_next_word,
 
 	// Wishbone master for sdram controller
@@ -18,11 +18,11 @@ module qpi_sdram_adapter #(
 	output reg o_wb_we,
 	output reg [(AW-1):0] o_wb_addr,
 	
-	output reg [(DW/8-1):0] o_wb_sel,
+	output [(DW/8-1):0] o_wb_sel,
 	input i_wb_ack,
 	input i_wb_stall,
 	input [(DW-1):0] i_wb_data,
-	output reg [(DW-1):0] o_wb_data,
+	output [(DW-1):0] o_wb_data,
 
 	// Clock
 	input  wire clk,
