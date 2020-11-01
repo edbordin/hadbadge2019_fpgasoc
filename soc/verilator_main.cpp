@@ -24,6 +24,7 @@
 #include "uart_emu_gdb.hpp"
 #include "video/video_renderer.hpp"
 #include "video/lcd_renderer.hpp"
+#include "sdramsim.h"
 
 int uart_get(int ts) {
 	return 1;
@@ -63,15 +64,19 @@ int main(int argc, char **argv) {
 	tb->btn=0xff; //no buttons pressed
 	int do_trace=1;
 
-	Psram_emu psrama=Psram_emu(8*1024*1024);
-	Psram_emu psramb=Psram_emu(8*1024*1024);
-	psrama.force_qpi(); psramb.force_qpi();
-	//ToDo: load elfs so we can mark ro sections as read-only
-	psrama.load_file_interleaved("boot/rom.bin", 0, false, false);
-	psramb.load_file_interleaved("boot/rom.bin", 0, false, true);
+	SDRAMSIM sdram;
 
-	psrama.load_file_interleaved("ipl/ipl.bin", 0x2000, false, false);
-	psramb.load_file_interleaved("ipl/ipl.bin", 0x2000, false, true);
+	sdram.load_file("boot/rom.bin", 0);
+	sdram.load_file("ipl/ipl.bin", 0x2000);
+	// Psram_emu psrama=Psram_emu(8*1024*1024);
+	// Psram_emu psramb=Psram_emu(8*1024*1024);
+	// psrama.force_qpi(); psramb.force_qpi();
+	// //ToDo: load elfs so we can mark ro sections as read-only
+	// psrama.load_file_interleaved("boot/rom.bin", 0, false, false);
+	// psramb.load_file_interleaved("boot/rom.bin", 0, false, true);
+
+	// psrama.load_file_interleaved("ipl/ipl.bin", 0x2000, false, false);
+	// psramb.load_file_interleaved("ipl/ipl.bin", 0x2000, false, true);
 
 	Uart_emu uart=Uart_emu(64);
 //	Uart_emu_gdb uart=Uart_emu_gdb(64);
@@ -112,23 +117,38 @@ int main(int argc, char **argv) {
 
 		pixel_clk = !pixel_clk;
 		tb->vid_pixelclk=pixel_clk?1:0;
-		tb->adc4=tb->adcrefout?0:1;
+		// tb->adc4=tb->adcrefout?0:1;
 
 		for (int c=0; c<4; c++)
 		{
 			int v;
 
-			do_abort |= psrama.eval(tb->psrama_sclk, tb->psrama_nce,
-					tb->soc__DOT__qspi_phy_psrama_I__DOT__spi_io_or,
-					tb->soc__DOT__qspi_phy_psrama_I__DOT__spi_io_tr,
-					&v);
-			tb->soc__DOT__qspi_phy_psrama_I__DOT__spi_io_ir = v;
+			short result = sdram(
+				tb->sdram_clk,
+				tb->sdram_cke,
+				tb->sdram_csn,
+				tb->sdram_rasn,
+				tb->sdram_casn,
+				tb->sdram_wen,
+				tb->sdram_ba,
+				tb->sdram_a,
+				tb->sdram_d_oe,
+				tb->sdram_d_in,
+				tb->sdram_dqm
+			);
+			tb->sdram_d_out = result;
 
-			do_abort |= psramb.eval(tb->psramb_sclk, tb->psramb_nce,
-					tb->soc__DOT__qspi_phy_psramb_I__DOT__spi_io_or,
-					tb->soc__DOT__qspi_phy_psramb_I__DOT__spi_io_tr,
-					&v);
-			tb->soc__DOT__qspi_phy_psramb_I__DOT__spi_io_ir = v;
+			// do_abort |= psrama.eval(tb->psrama_sclk, tb->psrama_nce,
+			// 		tb->soc__DOT__qspi_phy_psrama_I__DOT__spi_io_or,
+			// 		tb->soc__DOT__qspi_phy_psrama_I__DOT__spi_io_tr,
+			// 		&v);
+			// tb->soc__DOT__qspi_phy_psrama_I__DOT__spi_io_ir = v;
+
+			// do_abort |= psramb.eval(tb->psramb_sclk, tb->psramb_nce,
+			// 		tb->soc__DOT__qspi_phy_psramb_I__DOT__spi_io_or,
+			// 		tb->soc__DOT__qspi_phy_psramb_I__DOT__spi_io_tr,
+			// 		&v);
+			// tb->soc__DOT__qspi_phy_psramb_I__DOT__spi_io_ir = v;
 
 			uart.eval(tb->clk48m, tb->uart_tx, &rx);
 
@@ -137,6 +157,7 @@ int main(int argc, char **argv) {
 			tb->eval();
 
 			if (do_trace) trace->dump(tracepos*20 + c*5);
+			trace->flush();
 		}
 
 		do_trace = tb->trace_en;

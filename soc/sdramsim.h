@@ -1,11 +1,17 @@
 #ifndef	SDRAMSIM_H
 
+#include <cstdlib>
+
 #define	NBANKS	4
 #define	POWERED_UP_STATE	6
-#define	CLK_RATE_HZ		100000000 // = 100 MHz = 100 * 10^6
+// #define	CLK_RATE_HZ		100000000 // = 100 MHz = 100 * 10^6
+#define	CLK_RATE_HZ		48000000 // = 100 MHz = 100 * 10^6
 #define	PWRUP_WAIT_CKS		((int)(.000200 * CLK_RATE_HZ))
-#define	MAX_BANKOPEN_TIME	((int)(.000100 * CLK_RATE_HZ))
-#define	MAX_REFRESH_TIME	((int)(.064 * CLK_RATE_HZ))
+
+// #define	MAX_BANKOPEN_TIME	((int)(.000100 * CLK_RATE_HZ) ) // == 100 us
+#define	MAX_BANKOPEN_TIME	((int)(.064 * CLK_RATE_HZ)) // == 64 ms
+#define	MAX_REFRESH_TIME	((int)(.064 * CLK_RATE_HZ)) // == 64 ms
+
 #define	SDRAM_QSZ		16
 
 #define	LGSDRAMSZB	24
@@ -74,6 +80,18 @@ public:
 			sp+=2;
 			*dp++ = v;
 		}
+	}
+
+	int load_file(const char *file, int offset) {
+		FILE *f=fopen(file, "rb");
+		if (f==NULL) {
+			perror(file);
+			exit(1);
+		}
+		int size=fread(&m_mem[offset], 1, SDRAMSZB-offset, f);
+		fclose(f);
+		printf("Loaded file %s to 0x%X - 0x%X\n", file, offset, offset+size);
+		return 0;
 	}
 };
 

@@ -34,6 +34,7 @@ SRC_SIM = \
 	uart_emu.cpp \
 	uart_emu_gdb.cpp \
 	verilator_main.cpp \
+	sdramsim.cpp \
 	$(NULL)
 
 	# Misc

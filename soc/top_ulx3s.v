@@ -398,7 +398,7 @@ module top_ulx3s(
 	wire [15:0] sdram_d_out;
 	wire sdram_d_oe;
 	for (i=0; i<16; i+=1) begin
-		TRELLIS_IO #(.DIR("BIDIR")) genio_tristate[i] (.B(sdram_d[i]), .I(sdram_d_out[i]), .O(sdram_d_in[i]), .T(!sdram_d_oe));
+		TRELLIS_IO #(.DIR("BIDIR")) genio_tristate[i] (.B(sdram_d[i]), .I(sdram_d_in[i]), .O(sdram_d_out[i]), .T(!sdram_d_oe));
 	end
 	// sdram_d
 	// sdram_d_in
