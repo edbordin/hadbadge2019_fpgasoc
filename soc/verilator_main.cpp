@@ -14,6 +14,7 @@
  * along with this software.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <iostream>
 #include <stdlib.h>
 #include "Vsoc.h"
 #include <verilated.h>
@@ -26,6 +27,8 @@
 #include "video/lcd_renderer.hpp"
 #include "sdramsim.h"
 
+using namespace std;
+
 int uart_get(int ts) {
 	return 1;
 }
@@ -37,6 +40,7 @@ int do_abort=0;
 uint64_t ts=0;
 uint64_t tracepos=0;
 
+#define USE_SDRAM 1
 
 double sc_time_stamp() {
 	return ts;
@@ -62,21 +66,24 @@ int main(int argc, char **argv) {
 #endif
 
 	tb->btn=0xff; //no buttons pressed
-	int do_trace=1;
+	int do_trace=0;
 
+	#ifdef USE_SDRAM
 	SDRAMSIM sdram;
 
 	sdram.load_file("boot/rom.bin", 0);
 	sdram.load_file("ipl/ipl.bin", 0x2000);
-	// Psram_emu psrama=Psram_emu(8*1024*1024);
-	// Psram_emu psramb=Psram_emu(8*1024*1024);
-	// psrama.force_qpi(); psramb.force_qpi();
-	// //ToDo: load elfs so we can mark ro sections as read-only
-	// psrama.load_file_interleaved("boot/rom.bin", 0, false, false);
-	// psramb.load_file_interleaved("boot/rom.bin", 0, false, true);
+	#else
+	Psram_emu psrama=Psram_emu(8*1024*1024);
+	Psram_emu psramb=Psram_emu(8*1024*1024);
+	psrama.force_qpi(); psramb.force_qpi();
+	//ToDo: load elfs so we can mark ro sections as read-only
+	psrama.load_file_interleaved("boot/rom.bin", 0, false, false);
+	psramb.load_file_interleaved("boot/rom.bin", 0, false, true);
 
-	// psrama.load_file_interleaved("ipl/ipl.bin", 0x2000, false, false);
-	// psramb.load_file_interleaved("ipl/ipl.bin", 0x2000, false, true);
+	psrama.load_file_interleaved("ipl/ipl.bin", 0x2000, false, false);
+	psramb.load_file_interleaved("ipl/ipl.bin", 0x2000, false, true);
+	#endif
 
 	Uart_emu uart=Uart_emu(64);
 //	Uart_emu_gdb uart=Uart_emu_gdb(64);
@@ -94,99 +101,112 @@ int main(int argc, char **argv) {
 	int clkint=0;
 	int abort_timer=0;
 	tb->rst = 1;
-
-	while(1) {
-		ts++;
-		clkint+=123;
-		tb->clkint=(clkint&0x100)?1:0;
-		if (do_trace) tracepos++;
-		if (do_abort) {
-			//Continue for a bit after abort has been signalled.
-			abort_timer++;
-			if (abort_timer==32) break;
-		}
-		tb->uart_rx=uart_get(ts*21);
-		int rx;
-
-		if (ts > 10)
-			tb->rst = 0;
+	try {
 		
-		tb->uart_rx = rx;
-		tb->irda_rx = tb->irda_tx;
-		tb->flash_sin = ts & 0xf;
+		while(1) {
+			ts++;
+			clkint+=123;
+			tb->clkint=(clkint&0x100)?1:0;
+			if (do_trace) tracepos++;
+			if (do_abort) {
+				//Continue for a bit after abort has been signalled.
+				abort_timer++;
+				if (abort_timer==32) break;
+			}
+			tb->uart_rx=uart_get(ts*21);
+			int rx;
 
-		pixel_clk = !pixel_clk;
-		tb->vid_pixelclk=pixel_clk?1:0;
-		// tb->adc4=tb->adcrefout?0:1;
+			if (ts > 10)
+				tb->rst = 0;
+			
+			tb->uart_rx = rx;
+			tb->irda_rx = tb->irda_tx;
+			tb->flash_sin = ts & 0xf;
 
-		for (int c=0; c<4; c++)
-		{
-			int v;
+			pixel_clk = !pixel_clk;
+			tb->vid_pixelclk=pixel_clk?1:0;
+			// tb->adc4=tb->adcrefout?0:1;
+			// #ifdef USE_SDRAM
+			for (int c=0; c<2; c++)
+			{
+				int v;
 
-			short result = sdram(
-				tb->sdram_clk,
-				tb->sdram_cke,
-				tb->sdram_csn,
-				tb->sdram_rasn,
-				tb->sdram_casn,
-				tb->sdram_wen,
-				tb->sdram_ba,
-				tb->sdram_a,
-				tb->sdram_d_oe,
-				tb->sdram_d_in,
-				tb->sdram_dqm
-			);
-			tb->sdram_d_out = result;
+				if (c) {
+					short result = sdram(
+						1,
+						tb->sdram_cke,
+						tb->sdram_csn,
+						tb->sdram_rasn,
+						tb->sdram_casn,
+						tb->sdram_wen,
+						tb->sdram_ba,
+						tb->sdram_a,
+						tb->sdram_d_oe,
+						tb->sdram_d_in,
+						tb->sdram_dqm
+					);
+					tb->sdram_d_out = result;
+				}
 
-			// do_abort |= psrama.eval(tb->psrama_sclk, tb->psrama_nce,
-			// 		tb->soc__DOT__qspi_phy_psrama_I__DOT__spi_io_or,
-			// 		tb->soc__DOT__qspi_phy_psrama_I__DOT__spi_io_tr,
-			// 		&v);
-			// tb->soc__DOT__qspi_phy_psrama_I__DOT__spi_io_ir = v;
+				// do_abort |= psrama.eval(tb->psrama_sclk, tb->psrama_nce,
+				// 		tb->soc__DOT__qspi_phy_psrama_I__DOT__spi_io_or,
+				// 		tb->soc__DOT__qspi_phy_psrama_I__DOT__spi_io_tr,
+				// 		&v);
+				// tb->soc__DOT__qspi_phy_psrama_I__DOT__spi_io_ir = v;
 
-			// do_abort |= psramb.eval(tb->psramb_sclk, tb->psramb_nce,
-			// 		tb->soc__DOT__qspi_phy_psramb_I__DOT__spi_io_or,
-			// 		tb->soc__DOT__qspi_phy_psramb_I__DOT__spi_io_tr,
-			// 		&v);
-			// tb->soc__DOT__qspi_phy_psramb_I__DOT__spi_io_ir = v;
+				// do_abort |= psramb.eval(tb->psramb_sclk, tb->psramb_nce,
+				// 		tb->soc__DOT__qspi_phy_psramb_I__DOT__spi_io_or,
+				// 		tb->soc__DOT__qspi_phy_psramb_I__DOT__spi_io_tr,
+				// 		&v);
+				// tb->soc__DOT__qspi_phy_psramb_I__DOT__spi_io_ir = v;
 
-			uart.eval(tb->clk48m, tb->uart_tx, &rx);
+				uart.eval(tb->clk48m, tb->uart_tx, &rx);
 
-			tb->clk48m = (c >> 1) & 1;
-			tb->clk96m = (c     ) & 1;
-			tb->eval();
+				tb->clk48m = c; //(c >> 1) & 1;
+				tb->clk96m = 0;// (c     ) & 1;
+				tb->eval();
 
-			if (do_trace) trace->dump(tracepos*20 + c*5);
-			trace->flush();
-		}
+				if (do_trace)
+				{
+					trace->dump(tracepos*20 + c*10);
+					// cerr << c << "," << (tracepos*20 + c*10) << endl;
+				}
+			}
 
-		do_trace = tb->trace_en;
-		if (vid && pixel_clk) {
-			vid->next_pixel(tb->vid_red, tb->vid_green, tb->vid_blue, &fetch_next, &next_line, &next_field);
-			tb->vid_fetch_next=fetch_next;
-			tb->vid_next_line=next_line;
-			tb->vid_next_field=next_field;
-		}
-		if (lcd) lcd->update(tb->lcd_db, tb->lcd_wr, tb->lcd_rd, tb->lcd_rs);
-		if (oldled != tb->led) {
-			oldled=tb->led;
-			printf("LEDs: 0x%X\n", oldled);
-			if (tb->led==0x2a) do_abort=1;
-			//if (oldled == 0x3A) do_trace=1;
-		}
-/*
-		if (tb->soc__DOT__cpu__DOT__reg_pc==0x400060f4) {
-			do_trace=1;
-			printf("Trace start\n");
-		}
-		if (tb->soc__DOT__cpu__DOT__reg_pc==0x400002d4) {
-			do_trace=0;
-			printf("Trace stop\n");
-		}
-*/
-//		printf("%X\n", tb->soc__DOT__cpu__DOT__reg_pc);
-	};
-//	printf("Verilator sim exited, pc 0x%08X\n", tb->soc__DOT__cpu__DOT__reg_pc);
+			// do_trace = tb->trace_en;
+			if (vid && pixel_clk) {
+				vid->next_pixel(tb->vid_red, tb->vid_green, tb->vid_blue, &fetch_next, &next_line, &next_field);
+				tb->vid_fetch_next=fetch_next;
+				tb->vid_next_line=next_line;
+				tb->vid_next_field=next_field;
+			}
+			if (lcd) lcd->update(tb->lcd_db, tb->lcd_wr, tb->lcd_rd, tb->lcd_rs);
+			if (oldled != tb->led) {
+				oldled=tb->led;
+				printf("LEDs: 0x%X\n", oldled);
+				if (tb->led==0x2a) do_abort=1;
+				//if (oldled == 0x3A) do_trace=1;
+			}
+	/*
+			if (tb->soc__DOT__cpu__DOT__reg_pc==0x400060f4) {
+				do_trace=1;
+				printf("Trace start\n");
+			}
+			if (tb->soc__DOT__cpu__DOT__reg_pc==0x400002d4) {
+				do_trace=0;
+				printf("Trace stop\n");
+			}
+	*/
+	//		printf("%X\n", tb->soc__DOT__cpu__DOT__reg_pc);
+		};
+			}
+	 catch (logic_error& e)
+    {
+        cerr << "ERROR: " << e.what() << endl;
+		cerr << "Closing trace" << endl;
+        // return -1;
+    }
+	// printf("Verilator sim exited, pc 0x%08X\n", tb->soc__DOT__cpu__DOT__reg_pc);
 	trace->flush();
 
 	trace->close();

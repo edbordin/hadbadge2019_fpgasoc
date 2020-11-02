@@ -28,7 +28,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
+`define USE_SDRAM
 
 module soc(
 		input clk24m,
@@ -54,14 +54,29 @@ module soc(
 		input lcd_fmark,
 		output lcd_blen,
 
-		// // PSRAM chips
-		// inout wire [3:0] psrama_sio,
-		// inout wire psrama_nce,
-		// inout wire psrama_sclk,
+		`ifdef USE_SDRAM
+		output sdram_clk,
+		output sdram_cke,
+		output sdram_csn,
+		output sdram_wen,
+		output sdram_rasn,
+		output sdram_casn,
+		output [12:0] sdram_a,
+		output [1:0] sdram_ba,
+		output [1:0] sdram_dqm,
+		output sdram_d_oe,
+		output [15:0] sdram_d_out,
+		output [15:0] sdram_d_in,
+		`else
+		// PSRAM chips
+		inout wire [3:0] psrama_sio,
+		inout wire psrama_nce,
+		inout wire psrama_sclk,
 
-		// inout wire [3:0] psramb_sio,
-		// inout wire psramb_nce,
-		// inout wire psramb_sclk,
+		inout wire [3:0] psramb_sio,
+		inout wire psramb_nce,
+		inout wire psramb_sclk,
+		`endif //USE_SDRAM
 
 		output flash_nce,
 		output flash_selected,
@@ -108,21 +123,11 @@ module soc(
 		output reg [7:0] pmod_out,
 		output reg [7:0] pmod_oe,
 		
-		output reg trace_en,
+		output reg trace_en
 
-		output sdram_clk,
-		output sdram_cke,
-		output sdram_csn,
-		output sdram_wen,
-		output sdram_rasn,
-		output sdram_casn,
-		output [12:0] sdram_a,
-		output [1:0] sdram_ba,
-		output [1:0] sdram_dqm,
-		output sdram_d_oe,
-		output [15:0] sdram_d_out,
-		output [15:0] sdram_d_in
 	);
+
+	// assign led = {psram_select,usb_select,linerenderer_select,pic_select,mem_select,uart_select,misc_select,lcd_select, bus_error};
 
 	reg fpga_reload=0;
 	assign programn = ~fpga_reload;
@@ -506,6 +511,7 @@ module soc(
 			audio_select = mem_valid;
 			mem_rdata = audio_rdata;
 		end else if (mem_addr[31:28]=='h9) begin
+			assert(0);
 			psram_select = mem_valid;
 			mem_rdata = psram_rdata;
 		end else begin
@@ -667,9 +673,11 @@ module soc(
 
 	reg [15:0] pic_led;
 	wire [15:0] pic_led_out;
+	// assign led = {pic_led_out[10:8], pic_ledout[5:0]};
 	assign led = {pic_led_out[10:8], pic_led_out[5:0]};
 
-//	assign led = {1'b0, pic_led[7:0]}; //Wondering why that LED doesn't work?
+
+	// assign led = {1'b0, pic_led[8:0]}; //Wondering why that LED doesn't work?
 
 	pic_wrapper #(
 		.ROM_HEX("pic/rom_initial.hex")
@@ -826,6 +834,8 @@ module soc(
 	assign qpimem_arb_do_write[1] = 0;
 	assign `SLICE_32(qpimem_arb_wdata, 1) = 0;
 
+	`ifdef USE_SDRAM
+
 	// Controller
 	qpi_sdram_adapter qpi_sdram_adapter_I (
 		.qpi_do_read(qpi_do_read),
@@ -890,73 +900,75 @@ module soc(
 
 		assign sdram_clk = clk48m;
 	
-	// // PSRAM QPI interface
-	// // -------------------
+	`else
+	
+	// PSRAM QPI interface
+	// -------------------
 
-	// // Signals
-	// wire [15:0] psram_io_i;
-	// wire [15:0] psram_io_o;
-	// wire [ 7:0] psram_io_t;
-	// wire [1:0] psram_sck_o;
-	// wire psram_cs_o;
+	// Signals
+	wire [15:0] psram_io_i;
+	wire [15:0] psram_io_o;
+	wire [ 7:0] psram_io_t;
+	wire [1:0] psram_sck_o;
+	wire psram_cs_o;
 
-	// // Controller
-	// qpimem_iface_2x2w qpi_psram_I (
-	// 	.spi_io_i(psram_io_i),
-	// 	.spi_io_o(psram_io_o),
-	// 	.spi_io_t(psram_io_t),
-	// 	.spi_sck_o(psram_sck_o),
-	// 	.spi_cs_o(psram_cs_o),
-	// 	.qpi_do_read(qpi_do_read),
-	// 	.qpi_do_write(qpi_do_write),
-	// 	.qpi_addr({1'b0, qpi_addr[23:2], 1'b0}),
-	// 	.qpi_is_idle(qpi_is_idle),
-	// 	.qpi_wdata(qpi_wdata),
-	// 	.qpi_rdata(qpi_rdata),
-	// 	.qpi_next_word(qpi_next_word),
-	// 	.bus_addr(mem_addr[5:2]),
-	// 	.bus_wdata(mem_wdata),
-	// 	.bus_rdata(psram_rdata),
-	// 	.bus_cyc(psram_select),
-	// 	.bus_ack(psram_ready),
-	// 	.bus_we(mem_wstrb != 0),
-	// 	.clk(clk48m),
-	// 	.rst(rst)
-	// );
+	// Controller
+	qpimem_iface_2x2w qpi_psram_I (
+		.spi_io_i(psram_io_i),
+		.spi_io_o(psram_io_o),
+		.spi_io_t(psram_io_t),
+		.spi_sck_o(psram_sck_o),
+		.spi_cs_o(psram_cs_o),
+		.qpi_do_read(qpi_do_read),
+		.qpi_do_write(qpi_do_write),
+		.qpi_addr({1'b0, qpi_addr[23:2], 1'b0}),
+		.qpi_is_idle(qpi_is_idle),
+		.qpi_wdata(qpi_wdata),
+		.qpi_rdata(qpi_rdata),
+		.qpi_next_word(qpi_next_word),
+		.bus_addr(mem_addr[5:2]),
+		.bus_wdata(mem_wdata),
+		.bus_rdata(psram_rdata),
+		.bus_cyc(psram_select),
+		.bus_ack(psram_ready),
+		.bus_we(mem_wstrb != 0),
+		.clk(clk48m),
+		.rst(rst)
+	);
 
-	// // PHY
-	// qspi_phy_2x_ecp5 #(
-	// 	.N_CS(1)
-	// ) qspi_phy_psrama_I (
-	// 	.spi_io(psrama_sio),
-	// 	.spi_cs(psrama_nce),
-	// 	.spi_sck(psrama_sclk),
-	// 	.spi_io_i(psram_io_i[7:0]),
-	// 	.spi_io_o(psram_io_o[7:0]),
-	// 	.spi_io_t(psram_io_t[3:0]),
-	// 	.spi_sck_o(psram_sck_o),
-	// 	.spi_cs_o(psram_cs_o),
-	// 	.clk_1x(clk48m),
-	// 	.clk_2x(clk96m),
-	// 	.rst(rst)
-	// );
+	// PHY
+	qspi_phy_2x_ecp5 #(
+		.N_CS(1)
+	) qspi_phy_psrama_I (
+		.spi_io(psrama_sio),
+		.spi_cs(psrama_nce),
+		.spi_sck(psrama_sclk),
+		.spi_io_i(psram_io_i[7:0]),
+		.spi_io_o(psram_io_o[7:0]),
+		.spi_io_t(psram_io_t[3:0]),
+		.spi_sck_o(psram_sck_o),
+		.spi_cs_o(psram_cs_o),
+		.clk_1x(clk48m),
+		.clk_2x(clk96m),
+		.rst(rst)
+	);
 
-	// qspi_phy_2x_ecp5 #(
-	// 	.N_CS(1)
-	// ) qspi_phy_psramb_I (
-	// 	.spi_io(psramb_sio),
-	// 	.spi_cs(psramb_nce),
-	// 	.spi_sck(psramb_sclk),
-	// 	.spi_io_i(psram_io_i[15:8]),
-	// 	.spi_io_o(psram_io_o[15:8]),
-	// 	.spi_io_t(psram_io_t[7:4]),
-	// 	.spi_sck_o(psram_sck_o),
-	// 	.spi_cs_o(psram_cs_o),
-	// 	.clk_1x(clk48m),
-	// 	.clk_2x(clk96m),
-	// 	.rst(rst)
-	// );
-
+	qspi_phy_2x_ecp5 #(
+		.N_CS(1)
+	) qspi_phy_psramb_I (
+		.spi_io(psramb_sio),
+		.spi_cs(psramb_nce),
+		.spi_sck(psramb_sclk),
+		.spi_io_i(psram_io_i[15:8]),
+		.spi_io_o(psram_io_o[15:8]),
+		.spi_io_t(psram_io_t[7:4]),
+		.spi_sck_o(psram_sck_o),
+		.spi_cs_o(psram_cs_o),
+		.clk_1x(clk48m),
+		.clk_2x(clk96m),
+		.rst(rst)
+	);
+	`endif //USE_SDRAM
 
 	// Flash interface
 	// ---------------

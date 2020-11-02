@@ -1,8 +1,11 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <assert.h>
+#include <stdexcept>
+
+#include <cstdio>
+#include <cstdlib>
 
 #include "sdramsim.h"
+
+using namespace std;
 
 short	SDRAMSIM::operator()(int clk, int cke, int cs_n, int ras_n, int cas_n, int we_n,
 		int bs, unsigned addr, int driv, short data, short dqm) {
@@ -19,15 +22,15 @@ short	SDRAMSIM::operator()(int clk, int cke, int cs_n, int ras_n, int cas_n, int
 		fprintf(stderr, "\tRAS_n = %d\n", ras_n);
 		fprintf(stderr, "\tCAS_n = %d\n", cas_n);
 		fprintf(stderr, "\tWE_n  = %d\n", we_n);
-		assert(cke);
+		throw logic_error("This simulation only supports CKE high!");
 	}
 
 	if (m_pwrup < POWERED_UP_STATE) {
-		assert(dqm == 3);
+		if (dqm != 3) throw logic_error("invalid dqm before POWERED_UP_STATE");
 		if (m_clocks_till_idle > 0)
 			m_clocks_till_idle--;
 		if (m_pwrup == 0) {
-			assert((ras_n)&&(cas_n)&&(we_n));
+			if (!((ras_n)&&(cas_n)&&(we_n))) throw logic_error("keep ras_n/cas_n/we_n high during power up wait");
 			if (m_clocks_till_idle == 0) {
 				m_pwrup++;
 				printf("Successful power up wait, moving to state #1\n");
@@ -48,27 +51,28 @@ short	SDRAMSIM::operator()(int clk, int cke, int cs_n, int ras_n, int cas_n, int
 				for(int i=0; i<m_nrefresh; i++)
 					m_refresh_time[i] = MAX_REFRESH_TIME;
 			} 
-			// else
-				// assert((!cs_n)&&(!ras_n)&&(!cas_n)&&(we_n)); // Auto refresh or Self-refresh
+			else if (!((!cs_n)&&(!ras_n)&&(!cas_n)&&(we_n)))
+				throw logic_error("Expected 8 cycles in Auto refresh/Self-refresh mode");
 		} else if (m_pwrup == 3) {
 			const int tRSC = 2;
 			if ((!cs_n)&&(!ras_n)&&(!cas_n)&&(!we_n)){
 				// mode set
 				printf("Mode set: %08x\n", addr);
-				assert(addr == 0x021);
+				if(addr != 0x021) throw new logic_error("Unexpected addr during mode set");
+
 				m_pwrup++;
 				printf("Successful mode set, moving to state #3, tRSC = %d\n", tRSC);
 				m_clocks_till_idle=tRSC;
 			}
 		} else if (m_pwrup == 4) {
-			// assert(cs_n);
+			if(!cs_n)  throw new logic_error("CS_N pulled low too soon after mode set (tRSC violated)");
 			if (m_clocks_till_idle == 0) {
 				m_pwrup = POWERED_UP_STATE;
 				m_clocks_till_idle = 0;
-				printf("Successful settup!  SDRAM switching to operational\n");
+				printf("Successful setup!  SDRAM switching to operational\n");
 			} else if (m_clocks_till_idle == 1) {
 				;
-			} else assert(0 && "Should never get here!");
+			} else throw logic_error("Should never get here!");
 		} else if (m_pwrup == 5) {
 			if ((!cs_n)&&(!ras_n)&&(!cas_n)&&(we_n)) {
 				if (m_clocks_till_idle == 0) {
@@ -79,7 +83,7 @@ short	SDRAMSIM::operator()(int clk, int cke, int cs_n, int ras_n, int cas_n, int
 						m_refresh_time[i] = MAX_REFRESH_TIME;
 				}
 			} else {
-				assert(0);
+				throw logic_error("Should never get here!");
 			}
 		}
 		m_next_wr = false;
@@ -87,7 +91,7 @@ short	SDRAMSIM::operator()(int clk, int cke, int cs_n, int ras_n, int cas_n, int
 		for(int i=0; i<m_nrefresh; i++)
 			m_refresh_time[i]--;
 		if (m_refresh_time[m_refresh_loc] < 0) {
-			assert(0 && "Failed refresh requirement");
+			throw logic_error("Failed refresh requirement");
 		} for(int i=0; i<NBANKS; i++) {
 			m_bank_status[i] >>= 1;
 			if (m_bank_status[i]&2)
@@ -95,7 +99,7 @@ short	SDRAMSIM::operator()(int clk, int cke, int cs_n, int ras_n, int cas_n, int
 			if (m_bank_status[i]&1) { // Bank is open
 				m_bank_open_time[i] --;
 				if (m_bank_open_time[i] < 0) {
-					assert(0 && "Bank held open too long");
+					throw logic_error("Bank held open too long");
 				}
 			}
 		}
@@ -106,13 +110,13 @@ short	SDRAMSIM::operator()(int clk, int cke, int cs_n, int ras_n, int cas_n, int
 		if (m_fail > 0) {
 			m_fail--;
 			if (m_fail == 0) {
-				fprintf(stderr, "Failing on schedule\n");
+				throw logic_error("Failing on schedule");
 				exit(-3);
 			}
 		}
 
 		if ((m_clocks_till_idle > 0)&&(m_next_wr)) {
-			printf("SDRAM[%08x] <= %04x\n", m_wr_addr, data & 0x0ffff);
+			// printf("SDRAM[%08x] <= %04x\n", m_wr_addr, data & 0x0ffff);
 			int	waddr = m_wr_addr++, memval;
 			memval = m_mem[waddr];
 			if ((dqm&3)==0)
@@ -131,8 +135,8 @@ short	SDRAMSIM::operator()(int clk, int cke, int cs_n, int ras_n, int cas_n, int
 		result = (driv)?data:m_qdata[(m_qloc)&m_qmask];
 		m_qdata[(m_qloc)&m_qmask] = 0;
 
-		if (result != 0)
-			printf("%d RESULT[%3d] = %04x\n", clk, m_qloc, result&0x0ffff);
+		// if (result != 0)
+			// printf("%d RESULT[%3d] = %04x\n", clk, m_qloc, result&0x0ffff);
 
 		if ((!cs_n)&&(!ras_n)&&(!cas_n)&&(we_n)) {
 			// Auto-refresh command
@@ -140,10 +144,10 @@ short	SDRAMSIM::operator()(int clk, int cke, int cs_n, int ras_n, int cas_n, int
 			m_refresh_loc++;
 			if (m_refresh_loc >= m_nrefresh)
 				m_refresh_loc = 0;
-			assert((m_bank_status[0]&6) == 0);
-			assert((m_bank_status[1]&6) == 0);
-			assert((m_bank_status[2]&6) == 0);
-			assert((m_bank_status[3]&6) == 0);
+			if((m_bank_status[0]&6) != 0) throw logic_error("Trying to auto-refresh bank 0 when not in state 0");
+			if((m_bank_status[1]&6) != 0) throw logic_error("Trying to auto-refresh bank 1 when not in state 0");
+			if((m_bank_status[2]&6) != 0) throw logic_error("Trying to auto-refresh bank 2 when not in state 0");
+			if((m_bank_status[3]&6) != 0) throw logic_error("Trying to auto-refresh bank 3 when not in state 0");
 		} else if ((!cs_n)&&(!ras_n)&&(cas_n)&&(!we_n)) {
 			if (addr&0x0400) {
 				// Bank/Precharge All CMD
@@ -151,13 +155,13 @@ short	SDRAMSIM::operator()(int clk, int cke, int cs_n, int ras_n, int cas_n, int
 					m_bank_status[i] &= 0x03;
 			} else {
 				// Precharge/close single bank
-				assert(0 == (bs & (~3))); // Assert w/in bounds
+				if((bs & (~3)) != 0) throw new logic_error("bs out of bounds");
 				m_bank_status[bs] &= 0x03; // Close the bank
 
 				printf("Precharging bank %d\n", bs);
 			}
 		} else if ((!cs_n)&&(!ras_n)&&(cas_n)&&(we_n)) {
-			printf("Activating bank %d\n", bs);
+			// printf("Activating bank %d\n", bs);
 			// Activate a bank!
 			if (0 != (bs & (~3))) {
 				m_fail = 2;
@@ -173,11 +177,11 @@ short	SDRAMSIM::operator()(int clk, int cke, int cs_n, int ras_n, int cas_n, int
 			m_bank_open_time[bs] = MAX_BANKOPEN_TIME;
 			m_bank_row[bs] = addr;
 		} else if ((!cs_n)&&(ras_n)&&(!cas_n)) {
-			printf("R/W Op\n");
+			// printf("R/W Op\n");
 			if (!we_n) {
 				// Initiate a write
-				assert(0 == (bs & (~3))); // Assert w/in bounds
-				assert(m_bank_status[bs]&1); // Assert bank is open
+				if((bs & (~3)) != 0) throw new logic_error("bs out of bounds");
+				if(!(m_bank_status[bs]&1)) throw new logic_error("Cannot r/w bank before opening");
 
 				m_wr_addr = m_bank_row[bs];
 				m_wr_addr <<= 2;
@@ -185,8 +189,9 @@ short	SDRAMSIM::operator()(int clk, int cke, int cs_n, int ras_n, int cas_n, int
 				m_wr_addr <<= 9;
 				m_wr_addr |= (addr & 0x01ff);
 
-				assert(driv);
-				printf("SDRAM[%08x] <= %04x\n", m_wr_addr, data & 0x0ffff);
+				if (!driv) throw new logic_error("Cannot write with driv low");
+
+				// printf("SDRAM[%08x] <= %04x\n", m_wr_addr, data & 0x0ffff);
 				m_mem[m_wr_addr++] = data;
 				m_clocks_till_idle = 2;
 				m_next_wr = true;
@@ -196,8 +201,8 @@ short	SDRAMSIM::operator()(int clk, int cke, int cs_n, int ras_n, int cas_n, int
 					m_bank_open_time[bs] = MAX_BANKOPEN_TIME;
 				}
 			} else { // Initiate a read
-				assert(0 == (bs & (~3))); // Assert w/in bounds
-				assert(m_bank_status[bs]&1); // Assert bank is open
+				if((bs & (~3)) != 0) throw new logic_error("bs out of bounds");
+				if(!(m_bank_status[bs]&1)) throw new logic_error("Cannot r/w bank before opening");
 
 				unsigned	rd_addr;
 
@@ -207,14 +212,15 @@ short	SDRAMSIM::operator()(int clk, int cke, int cs_n, int ras_n, int cas_n, int
 				rd_addr <<= 9;
 				rd_addr |= (addr & 0x01ff);
 
-				assert(!driv);
-				printf("SDRAM.Q[%2d] %04x <= SDRAM[%08x]\n",
-					(m_qloc+3)&m_qmask,
-					m_mem[rd_addr] & 0x0ffff, rd_addr);
+				if (driv) throw new logic_error("Cannot read with driv high");
+
+				// printf("SDRAM.Q[%2d] %04x <= SDRAM[%08x]\n",
+				// 	(m_qloc+3)&m_qmask,
+				// 	m_mem[rd_addr] & 0x0ffff, rd_addr);
 				m_qdata[(m_qloc+3)&m_qmask] = m_mem[rd_addr++];
-				printf("SDRAM.Q[%2d] %04x <= SDRAM[%08x]\n",
-					(m_qloc+4)&m_qmask,
-					m_mem[rd_addr] & 0x0ffff, rd_addr);
+				// printf("SDRAM.Q[%2d] %04x <= SDRAM[%08x]\n",
+				// 	(m_qloc+4)&m_qmask,
+				// 	m_mem[rd_addr] & 0x0ffff, rd_addr);
 				m_qdata[(m_qloc+4)&m_qmask] = m_mem[rd_addr++];
 				m_clocks_till_idle = 2;
 
@@ -233,7 +239,7 @@ short	SDRAMSIM::operator()(int clk, int cke, int cs_n, int ras_n, int cas_n, int
 			fprintf(stderr, "\tRAS_n = %d\n", ras_n);
 			fprintf(stderr, "\tCAS_n = %d\n", cas_n);
 			fprintf(stderr, "\tWE_n  = %d\n", we_n);
-			assert(0 && "Unrecognizned command");
+			throw new logic_error("Unrecognized command");
 		}
 	}
 

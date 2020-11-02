@@ -197,7 +197,7 @@ $(PROJ).json $(PROJ).blif: $(SRC) $(SRC_SYNTH) $(EXTRA_DEPEND)
 #bitstreams with SPI-specific things over JTAG.
 
 %.bit: %_out.config
-	ecppack$(EXE) --spimode $(FLASH_MODE) --freq $(FLASH_FREQ) --input $< --bit $@
+	ecppack$(EXE) --compress --spimode $(FLASH_MODE) --freq $(FLASH_FREQ) --input $< --bit $@
 
 %.svf: %_out.config
 	ecppack$(EXE) --svf-rowsize 100000 --svf $@ --input $<

@@ -139,19 +139,11 @@ module top_ulx3s(
 		inout [15:0] sdram_d,
 		inout wifi_en,
 		inout wifi_gpio0,
-		inout wifi_gpio2,
-		inout wifi_gpio5,
-		inout wifi_gpio16,
-		inout wifi_gpio17,
 	);
 
-	// 
+	// enable the esp32 for easier reflashing
 	assign wifi_en = 1'b1;
 	assign wifi_gpio0 = 1'b1;
-	assign wifi_gpio2 = 1'bZ;
-	assign wifi_gpio5 = 1'bZ;
-	assign wifi_gpio16 = 1'bZ;
-	assign wifi_gpio17 = 1'bZ;
 
 	wire pwmout;
 	assign audio_l = {pwmout,pwmout,pwmout,pwmout};
@@ -196,7 +188,7 @@ module top_ulx3s(
 	wire flash_sclk;
 	wire flash_cs;
 	wire flash_selected;
-	assign flash_selected = 1'b0; //when it is high, it tri-states the MCLK pin
+	// assign flash_selected = 1'b0; //when it is high, it tri-states the MCLK pin
 	wire [29:0] genio_in;
 	wire [29:0] genio_out;
 	wire [29:0] genio_oe;
@@ -227,7 +219,8 @@ module top_ulx3s(
 // 	assign ledc = led;
 // 	assign leda = 3'b1;
 // `endif
-
+// assign led = 8'b11111111;
+	`define USE_SDRAM
 	soc soc (
 		.clk24m(clk24m),
 		.clk48m(clk48m),
@@ -235,7 +228,7 @@ module top_ulx3s(
 		.clkint(clkint),
 		.rst(rst_soc),
 		// .btn({1'b0, btn}),
-		.btn(),
+		.btn(btn),
 		.led(led),
 		.uart_tx(ftdi_rxd),
 		.uart_rx(ftdi_txd),
@@ -283,7 +276,7 @@ module top_ulx3s(
 		// .flash_nce(flash_cs),
 		// .flash_selected(flash_selected),
 		.flash_nce(flash_csn),
-		.flash_selected(),
+		.flash_selected(flash_selected),
 		.flash_sclk(flash_sclk),
 		.flash_sin(flash_sin),
 		.flash_sout(flash_sout),

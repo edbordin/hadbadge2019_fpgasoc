@@ -1,6 +1,7 @@
 #ifndef	SDRAMSIM_H
 
 #include <cstdlib>
+#include <stdexcept>
 
 #define	NBANKS	4
 #define	POWERED_UP_STATE	6
@@ -36,8 +37,15 @@ public:
 
 		m_nrefresh = 1<<13;
 		m_refresh_time = new unsigned[m_nrefresh];
-		for(int i=0; i<m_nrefresh; i++)
+		for(int i=0; i<m_nrefresh; i++) {
 			m_refresh_time[i] = 0;
+		}
+		for(int i=0; i<NBANKS; i++) {
+			m_bank_open_time[i] = 0;
+			m_bank_row[i] = 0;
+			m_bank_status[i] = 0;
+		}
+
 		m_refresh_loc = 0;
 
 		m_pwrup = 0;
@@ -69,10 +77,10 @@ public:
 		const char	*sp = data;
 		unsigned	base;
 
-		assert((addr&1)==0);
+		if((addr&1)!=0) throw new std::logic_error("Address misaligned");
 		base = addr & (SDRAMSZB-1);
-		assert((len&1)==0);
-		assert(addr + len < SDRAMSZB);
+		if((len&1)!=0) throw new std::logic_error("Length misaligned");
+		if(addr + len >= SDRAMSZB) throw new std::logic_error("Cannot load past end of memory");
 		dp = &m_mem[(base>>1)];
 		for(unsigned k=0; k<len/2; k++) {
 			short	v;
