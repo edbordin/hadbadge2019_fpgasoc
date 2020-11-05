@@ -20,8 +20,8 @@
 
 class	SDRAMSIM {
 	int	m_pwrup;
-	short	*m_mem;
-	short	m_last_value, m_qmem[4];
+	uint16_t	*m_mem;
+	uint16_t	m_last_value, m_qmem[4];
 	int	m_bank_status[NBANKS];
 	int	m_bank_row[NBANKS];
 	int	m_bank_open_time[NBANKS];
@@ -33,12 +33,18 @@ class	SDRAMSIM {
 	unsigned	m_fail;
 public:
 	SDRAMSIM(void) {
-		m_mem = new short[SDRAMSZB/2]; // 32 MB, or 16 Mshorts
+		m_mem = new uint16_t[SDRAMSZB/2]; // 32 MB, or 16 Muint16_ts
 
 		m_nrefresh = 1<<13;
 		m_refresh_time = new unsigned[m_nrefresh];
 		for(int i=0; i<m_nrefresh; i++) {
 			m_refresh_time[i] = 0;
+		}
+		for(int i=0; i<4; i++) {
+			m_qmem[i] = 0;
+		}
+		for (int i=0; i<SDRAM_QSZ; i++) {
+			m_qdata[i] = 0;
 		}
 		for(int i=0; i<NBANKS; i++) {
 			m_bank_open_time[i] = 0;
@@ -66,14 +72,14 @@ public:
 		delete m_mem;
 	}
 
-	short operator()(int clk, int cke,
+	uint16_t operator()(int clk, int cke,
 			int cs_n, int ras_n, int cas_n, int we_n, int bs, 
 				unsigned addr,
-			int driv, short data, short dqm);
+			int driv, uint16_t data, uint16_t dqm);
 	int	pwrup(void) const { return m_pwrup; }
 
 	void	load(unsigned addr, const char *data, size_t len) {
-		short		*dp;
+		uint16_t		*dp;
 		const char	*sp = data;
 		unsigned	base;
 
@@ -83,22 +89,38 @@ public:
 		if(addr + len >= SDRAMSZB) throw new std::logic_error("Cannot load past end of memory");
 		dp = &m_mem[(base>>1)];
 		for(unsigned k=0; k<len/2; k++) {
-			short	v;
+			uint16_t	v;
 			v = (sp[0]<<8)|(sp[1]&0x0ff);
 			sp+=2;
 			*dp++ = v;
 		}
 	}
 
-	int load_file(const char *file, int offset) {
+	int load_file(const char *file, unsigned addr) {
+		if((addr&3)!=0) throw new std::logic_error("Address misaligned");
+		unsigned base = addr & (SDRAMSZB-1);
+		uint16_t *dp = &m_mem[(base>>1)];
+
 		FILE *f=fopen(file, "rb");
 		if (f==NULL) {
 			perror(file);
 			exit(1);
 		}
-		int size=fread(&m_mem[offset], 1, SDRAMSZB-offset, f);
+		int size=fread(dp, 1, SDRAMSZB-addr, f);
 		fclose(f);
-		printf("Loaded file %s to 0x%X - 0x%X\n", file, offset, offset+size);
+
+		uint8_t *dp_b = (uint8_t *) dp;
+		for(unsigned k=0; k<size/4; k++) {
+			uint8_t v0 = dp_b[0];
+			uint8_t v1 = dp_b[1];
+			dp_b[0] = dp_b[2];
+			dp_b[1] = dp_b[3];
+			dp_b[2] = v0;
+			dp_b[3] = v1;
+			dp_b += 4;
+		}
+
+		printf("Loaded file %s to 0x%X - 0x%X\n", file, addr, addr+size);
 		return 0;
 	}
 };

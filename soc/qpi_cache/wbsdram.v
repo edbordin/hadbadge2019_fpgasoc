@@ -55,17 +55,19 @@
 `define	RAM_SET_MODE	2'b10
 `define	RAM_INITIAL_REFRESH	2'b11
 //
-module	wbsdram(i_clk,
+module	wbsdram #(
+	parameter integer AW = 23,
+	parameter integer DW = 32,
+	parameter integer RDLY = 6
+)(i_clk,
 		i_wb_cyc, i_wb_stb, i_wb_we, i_wb_addr, i_wb_data, i_wb_sel,
 			o_wb_ack, o_wb_stall, o_wb_data,
 		o_ram_cs_n, o_ram_cke, o_ram_ras_n, o_ram_cas_n, o_ram_we_n,
 			o_ram_bs, o_ram_addr,
 			o_ram_dmod, i_ram_data, o_ram_data, o_ram_dqm,
 		o_debug);
-	// parameter	RDLY = 6;
-	parameter	RDLY = 4;
 	parameter [0:0]	F_OPT_CLK2FFLOGIC = 1'b0;
-	localparam	AW=23, DW=32;
+	// localparam	AW=23, DW=32;
 	input	wire			i_clk;
 	// Wishbone
 	//	inputs

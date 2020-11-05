@@ -66,7 +66,7 @@ module soc(
 		output [1:0] sdram_dqm,
 		output sdram_d_oe,
 		output [15:0] sdram_d_out,
-		output [15:0] sdram_d_in,
+		input [15:0] sdram_d_in,
 		`else
 		// PSRAM chips
 		inout wire [3:0] psrama_sio,
@@ -515,6 +515,7 @@ module soc(
 			psram_select = mem_valid;
 			mem_rdata = psram_rdata;
 		end else begin
+			assert(0);
 			//Bus error. Raise IRQ if memory is accessed.
 			mem_rdata = 'hDEADBEEF;
 			bus_error = mem_valid;
@@ -780,7 +781,7 @@ module soc(
 		.CACHELINE_WORDS(16),
 		.CACHELINE_CT(512),
 		.ADDR_WIDTH(22) //addresses words
-	) qpimem_cache (
+	) qpimem_cache_I (
 		.clk(clk48m),
 		.rst(rst),
 		
@@ -835,12 +836,27 @@ module soc(
 	assign `SLICE_32(qpimem_arb_wdata, 1) = 0;
 
 	`ifdef USE_SDRAM
+	
+	// point-to-point wishbone bus
+	wire sdram_wb_cyc;
+	wire sdram_wb_stb;
+	wire sdram_wb_we;
+	wire [22:0] sdram_wb_addr;
+	wire [31:0] sdram_wb_data_ctl_out_sdram_in;
+	wire [31:0] sdram_wb_data_ctl_in_sdram_out;
+	wire [3:0] sdram_wb_sel;
+	wire sdram_wb_sel;
+	wire sdram_wb_ack;
+	wire sdram_wb_stall;
 
 	// Controller
-	qpi_sdram_adapter qpi_sdram_adapter_I (
+	qpi_sdram_adapter #(
+		.AW(23),
+		.DW(32)
+	) qpi_sdram_adapter_I (
 		.qpi_do_read(qpi_do_read),
 		.qpi_do_write(qpi_do_write),
-		.qpi_addr({1'b0, qpi_addr[23:2], 1'b0}),
+		.qpi_addr({1'b0, qpi_addr[23:2]}),
 		.qpi_is_idle(qpi_is_idle),
 		.qpi_wdata(qpi_wdata),
 		.qpi_rdata(qpi_rdata),
@@ -860,19 +876,18 @@ module soc(
 		.rst(rst)
 	);
 
-	// point-to-point wishbone bus
-	wire sdram_wb_cyc;
-	wire sdram_wb_stb;
-	wire sdram_wb_we;
-	wire sdram_wb_addr;
-	wire sdram_wb_data_ctl_out_sdram_in;
-	wire sdram_wb_data_ctl_in_sdram_out;
-	wire sdram_wb_sel;
-	wire sdram_wb_ack;
-	wire sdram_wb_stall;
+
 
 	// wishbone sdram controller
-	wbsdram wbsdram_I(
+	wbsdram #(
+		.AW(23),
+		.DW(32),
+	`ifdef VERILATOR		
+		.RDLY(6)
+	`else
+		.RDLY(4)
+	`endif
+	) wbsdram_I(
 		.i_clk(clk48m),
 		.i_wb_cyc(sdram_wb_cyc),
 		.i_wb_stb(sdram_wb_stb),

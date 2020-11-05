@@ -7,9 +7,9 @@
 
 using namespace std;
 
-short	SDRAMSIM::operator()(int clk, int cke, int cs_n, int ras_n, int cas_n, int we_n,
-		int bs, unsigned addr, int driv, short data, short dqm) {
-	short	result = 0;
+uint16_t	SDRAMSIM::operator()(int clk, int cke, int cs_n, int ras_n, int cas_n, int we_n,
+		int bs, unsigned addr, int driv, uint16_t data, uint16_t dqm) {
+	uint16_t	result = 0;
 
 	if (driv) // If the bus is going out, reads don't make sense ... but
 		result = data; // read what we output anyway
@@ -118,6 +118,8 @@ short	SDRAMSIM::operator()(int clk, int cke, int cs_n, int ras_n, int cas_n, int
 		if ((m_clocks_till_idle > 0)&&(m_next_wr)) {
 			// printf("SDRAM[%08x] <= %04x\n", m_wr_addr, data & 0x0ffff);
 			int	waddr = m_wr_addr++, memval;
+			if (waddr < 0 || waddr >= SDRAMSZB/2)
+				throw logic_error("waddr out of bounds");
 			memval = m_mem[waddr];
 			if ((dqm&3)==0)
 				memval = data;
@@ -136,7 +138,7 @@ short	SDRAMSIM::operator()(int clk, int cke, int cs_n, int ras_n, int cas_n, int
 		m_qdata[(m_qloc)&m_qmask] = 0;
 
 		// if (result != 0)
-			// printf("%d RESULT[%3d] = %04x\n", clk, m_qloc, result&0x0ffff);
+		// 	printf("%d RESULT[%3d] = %04x\n", clk, m_qloc, result&0x0ffff);
 
 		if ((!cs_n)&&(!ras_n)&&(!cas_n)&&(we_n)) {
 			// Auto-refresh command
@@ -155,7 +157,8 @@ short	SDRAMSIM::operator()(int clk, int cke, int cs_n, int ras_n, int cas_n, int
 					m_bank_status[i] &= 0x03;
 			} else {
 				// Precharge/close single bank
-				if((bs & (~3)) != 0) throw new logic_error("bs out of bounds");
+				if((bs & (~3)) != 0)
+					throw new logic_error("bs out of bounds");
 				m_bank_status[bs] &= 0x03; // Close the bank
 
 				printf("Precharging bank %d\n", bs);
@@ -173,6 +176,7 @@ short	SDRAMSIM::operator()(int clk, int cke, int cs_n, int ras_n, int cas_n, int
 				m_fail = 4;
 				// assert(m_bank_status[bs]==0); // Assert bank was closed
 			}
+			// fprintf(stderr, "Open Bank %X, addr %X\n", bs, addr);
 			m_bank_status[bs] |= 4;
 			m_bank_open_time[bs] = MAX_BANKOPEN_TIME;
 			m_bank_row[bs] = addr;
@@ -180,7 +184,8 @@ short	SDRAMSIM::operator()(int clk, int cke, int cs_n, int ras_n, int cas_n, int
 			// printf("R/W Op\n");
 			if (!we_n) {
 				// Initiate a write
-				if((bs & (~3)) != 0) throw new logic_error("bs out of bounds");
+				if((bs & (~3)) != 0)
+					throw new logic_error("bs out of bounds");
 				if(!(m_bank_status[bs]&1)) throw new logic_error("Cannot r/w bank before opening");
 
 				m_wr_addr = m_bank_row[bs];
@@ -189,7 +194,11 @@ short	SDRAMSIM::operator()(int clk, int cke, int cs_n, int ras_n, int cas_n, int
 				m_wr_addr <<= 9;
 				m_wr_addr |= (addr & 0x01ff);
 
-				if (!driv) throw new logic_error("Cannot write with driv low");
+				if (m_wr_addr < 0 || m_wr_addr >= SDRAMSZB/2) 
+					throw logic_error("waddr out of bounds");
+
+				if (!driv)
+					throw new logic_error("Cannot write with driv low");
 
 				// printf("SDRAM[%08x] <= %04x\n", m_wr_addr, data & 0x0ffff);
 				m_mem[m_wr_addr++] = data;
@@ -201,7 +210,8 @@ short	SDRAMSIM::operator()(int clk, int cke, int cs_n, int ras_n, int cas_n, int
 					m_bank_open_time[bs] = MAX_BANKOPEN_TIME;
 				}
 			} else { // Initiate a read
-				if((bs & (~3)) != 0) throw new logic_error("bs out of bounds");
+				if((bs & (~3)) != 0)
+					throw new logic_error("bs out of bounds");
 				if(!(m_bank_status[bs]&1)) throw new logic_error("Cannot r/w bank before opening");
 
 				unsigned	rd_addr;
@@ -217,10 +227,14 @@ short	SDRAMSIM::operator()(int clk, int cke, int cs_n, int ras_n, int cas_n, int
 				// printf("SDRAM.Q[%2d] %04x <= SDRAM[%08x]\n",
 				// 	(m_qloc+3)&m_qmask,
 				// 	m_mem[rd_addr] & 0x0ffff, rd_addr);
+				if (rd_addr < 0 || rd_addr >= SDRAMSZB/2)
+					throw logic_error("rd_addr out of bounds");
 				m_qdata[(m_qloc+3)&m_qmask] = m_mem[rd_addr++];
 				// printf("SDRAM.Q[%2d] %04x <= SDRAM[%08x]\n",
 				// 	(m_qloc+4)&m_qmask,
 				// 	m_mem[rd_addr] & 0x0ffff, rd_addr);
+				if (rd_addr < 0 || rd_addr >= SDRAMSZB/2)
+					throw logic_error("rd_addr out of bounds");
 				m_qdata[(m_qloc+4)&m_qmask] = m_mem[rd_addr++];
 				m_clocks_till_idle = 2;
 

@@ -39,6 +39,7 @@ int do_abort=0;
 
 uint64_t ts=0;
 uint64_t tracepos=0;
+vluint64_t trace_time=0;
 
 #define USE_SDRAM 1
 
@@ -66,7 +67,7 @@ int main(int argc, char **argv) {
 #endif
 
 	tb->btn=0xff; //no buttons pressed
-	int do_trace=0;
+	int do_trace=1;
 
 	#ifdef USE_SDRAM
 	SDRAMSIM sdram;
@@ -101,9 +102,10 @@ int main(int argc, char **argv) {
 	int clkint=0;
 	int abort_timer=0;
 	tb->rst = 1;
+	int cyc=0;
 	try {
 		
-		while(1) {
+		while(cyc++ < 1000000) {
 			ts++;
 			clkint+=123;
 			tb->clkint=(clkint&0x100)?1:0;
@@ -126,13 +128,11 @@ int main(int argc, char **argv) {
 			pixel_clk = !pixel_clk;
 			tb->vid_pixelclk=pixel_clk?1:0;
 			// tb->adc4=tb->adcrefout?0:1;
-			// #ifdef USE_SDRAM
+			#ifdef USE_SDRAM
 			for (int c=0; c<2; c++)
 			{
-				int v;
-
 				if (c) {
-					short result = sdram(
+					uint16_t result = sdram(
 						1,
 						tb->sdram_cke,
 						tb->sdram_csn,
@@ -142,34 +142,45 @@ int main(int argc, char **argv) {
 						tb->sdram_ba,
 						tb->sdram_a,
 						tb->sdram_d_oe,
-						tb->sdram_d_in,
+						tb->sdram_d_out,
 						tb->sdram_dqm
 					);
-					tb->sdram_d_out = result;
+					tb->sdram_d_in = result;
 				}
+			#else
+			for (int c=0; c<4; c++)
+			{
+				int v;
+				do_abort |= psrama.eval(tb->psrama_sclk, tb->psrama_nce,
+						tb->soc__DOT__qspi_phy_psrama_I__DOT__spi_io_or,
+						tb->soc__DOT__qspi_phy_psrama_I__DOT__spi_io_tr,
+						&v);
+				tb->soc__DOT__qspi_phy_psrama_I__DOT__spi_io_ir = v;
 
-				// do_abort |= psrama.eval(tb->psrama_sclk, tb->psrama_nce,
-				// 		tb->soc__DOT__qspi_phy_psrama_I__DOT__spi_io_or,
-				// 		tb->soc__DOT__qspi_phy_psrama_I__DOT__spi_io_tr,
-				// 		&v);
-				// tb->soc__DOT__qspi_phy_psrama_I__DOT__spi_io_ir = v;
-
-				// do_abort |= psramb.eval(tb->psramb_sclk, tb->psramb_nce,
-				// 		tb->soc__DOT__qspi_phy_psramb_I__DOT__spi_io_or,
-				// 		tb->soc__DOT__qspi_phy_psramb_I__DOT__spi_io_tr,
-				// 		&v);
-				// tb->soc__DOT__qspi_phy_psramb_I__DOT__spi_io_ir = v;
+				do_abort |= psramb.eval(tb->psramb_sclk, tb->psramb_nce,
+						tb->soc__DOT__qspi_phy_psramb_I__DOT__spi_io_or,
+						tb->soc__DOT__qspi_phy_psramb_I__DOT__spi_io_tr,
+						&v);
+				tb->soc__DOT__qspi_phy_psramb_I__DOT__spi_io_ir = v;
+			#endif
 
 				uart.eval(tb->clk48m, tb->uart_tx, &rx);
 
+				#ifdef USE_SDRAM
 				tb->clk48m = c; //(c >> 1) & 1;
 				tb->clk96m = 0;// (c     ) & 1;
+				trace_time = tracepos*20 + c*10;
+				#else
+				tb->clk48m = (c >> 1) & 1;
+				tb->clk96m = (c     ) & 1;
+				trace_time = tracepos*20 + c*5;
+				#endif
 				tb->eval();
 
 				if (do_trace)
 				{
-					trace->dump(tracepos*20 + c*10);
-					// cerr << c << "," << (tracepos*20 + c*10) << endl;
+					trace->dump(trace_time);
+					// cerr << c << "," << (trace_time) << endl;
 				}
 			}
 
