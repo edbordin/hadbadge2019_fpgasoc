@@ -41,7 +41,7 @@ uint64_t ts=0;
 uint64_t tracepos=0;
 vluint64_t trace_time=0;
 
-#define USE_SDRAM 1
+// #define USE_SDRAM 1
 
 double sc_time_stamp() {
 	return ts;
@@ -168,7 +168,8 @@ int main(int argc, char **argv) {
 
 				#ifdef USE_SDRAM
 				tb->clk48m = c; //(c >> 1) & 1;
-				tb->clk96m = 0;// (c     ) & 1;
+				tb->clk_48m_sdram = c;
+				// tb->clk96m = 0;// (c     ) & 1;
 				trace_time = tracepos*20 + c*10;
 				#else
 				tb->clk48m = (c >> 1) & 1;

@@ -180,11 +180,11 @@ FLASH_FREQ=38.8 #MHz
 
 
 all: $(PROJ).svf
-
+# -abc9
 $(PROJ).json $(PROJ).blif: $(SRC) $(SRC_SYNTH) $(EXTRA_DEPEND)
 	yosys$(EXE) -e ".*(assigned|implicitly).*" -l yosys.log \
 		-p "read -sv -DBADGE_VER=$(BADGE_VER) -D$(HWDEF)=1 $(SRC) $(SRC_SYNTH); \
-			synth_ecp5 -abc9 -top top_ulx3s -json $(PROJ).json -blif $(PROJ).blif"
+			synth_ecp5 -top top_ulx3s -json $(PROJ).json -blif $(PROJ).blif"
 
 %_out_synth.config: %.json clock-constraints.py
 	nextpnr-ecp5$(EXE) --json $< --lpf $(CONSTR) --textcfg $@ --85k --package CABGA381 --speed 8 \

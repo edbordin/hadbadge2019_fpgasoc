@@ -273,12 +273,12 @@ assign doing_cache_refill = qpi_do_read || qpi_do_write;
 //internally-generated addresses (for cache flush actions).
 always @(*) begin
 	if (!flushing) begin
-		caddr = addr; //just use external address
+		caddr <= addr; //just use external address
 	end else begin
 		//This is kinda roundabout... by setting the correct set here, we get the per-way tag from the tag memory
 		//and we use that to set the tag here. It's more-or-less two operations in one go. The advantage here is that
 		//we get the correct way selected by the address matching logic 'for free'.
-		caddr = {tag_rdata[flush_way], flush_line, {CACHE_OFFSET_BITS{1'b0}} };
+		caddr <= {tag_rdata[flush_way], flush_line, {CACHE_OFFSET_BITS{1'b0}} };
 	end
 end
 

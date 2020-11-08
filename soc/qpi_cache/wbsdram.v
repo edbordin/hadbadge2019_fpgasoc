@@ -59,7 +59,7 @@ module	wbsdram #(
 	parameter integer AW = 23,
 	parameter integer DW = 32,
 	parameter integer RDLY = 6
-)(i_clk,
+)(i_clk, i_rst,
 		i_wb_cyc, i_wb_stb, i_wb_we, i_wb_addr, i_wb_data, i_wb_sel,
 			o_wb_ack, o_wb_stall, o_wb_data,
 		o_ram_cs_n, o_ram_cke, o_ram_ras_n, o_ram_cas_n, o_ram_we_n,
@@ -69,6 +69,7 @@ module	wbsdram #(
 	parameter [0:0]	F_OPT_CLK2FFLOGIC = 1'b0;
 	// localparam	AW=23, DW=32;
 	input	wire			i_clk;
+	input	wire			i_rst;
 	// Wishbone
 	//	inputs
 	input	wire			i_wb_cyc, i_wb_stb, i_wb_we;
@@ -122,7 +123,9 @@ module	wbsdram #(
 	initial	refresh_clk = 0;
 	always @(posedge i_clk)
 	begin
-		if (refresh_cmd)
+		if (i_rst) begin
+			refresh_clk <= 0;
+		end else if (refresh_cmd)
 			refresh_clk <= 10'd375; // Make suitable for 48 MHz clk
 			// refresh_clk <= 10'd625; // Make suitable for 80 MHz clk
 		else if (|refresh_clk)
@@ -130,19 +133,27 @@ module	wbsdram #(
 	end
 	initial	need_refresh = 1'b0;
 	always @(posedge i_clk)
-		need_refresh <= (refresh_clk == 10'h00)&&(!refresh_cmd);
+		if (i_rst)
+			need_refresh <= 0;
+		else 
+			need_refresh <= (refresh_clk == 10'h00)&&(!refresh_cmd);
 
 	reg	in_refresh;
 	reg	[2:0]	in_refresh_clk;
 	initial	in_refresh_clk = 3'h0;
 	always @(posedge i_clk)
-		if (refresh_cmd)
+		if (i_rst)
+			in_refresh_clk <= 3'h0;
+		else if (refresh_cmd)
 			in_refresh_clk <= 3'h6;
 		else if (|in_refresh_clk)
 			in_refresh_clk <= in_refresh_clk - 3'h1;
 	initial	in_refresh = 0;
 	always @(posedge i_clk)
-		in_refresh <= (in_refresh_clk != 3'h0)||(refresh_cmd);
+		if (i_rst)
+			in_refresh <= 0;
+		else
+			in_refresh <= (in_refresh_clk != 3'h0)||(refresh_cmd);
 `ifdef	FORMAL
 	always @(posedge i_clk)
 		if (in_refresh)
@@ -186,7 +197,14 @@ module	wbsdram #(
 	initial	r_addr = 0;
 	initial fwd_addr[22:5] = 1;
 	always @(posedge i_clk)
-		if (bus_cyc)
+		if (i_rst) begin
+			r_pending <= 1'b0;
+			r_we <= 0;
+			r_addr <= 0;
+			r_data <= 0;
+			r_sel <= 0;
+			fwd_addr[22:5] <= 1;
+		end else if (bus_cyc)
 		begin
 			r_pending <= 1'b1;
 			r_we      <= i_wb_we;
@@ -207,7 +225,9 @@ module	wbsdram #(
 	reg	r_bank_valid;
 	initial	r_bank_valid = 1'b0;
 	always @(posedge i_clk)
-		if (bus_cyc)
+		if (i_rst)
+			r_bank_valid <= 1'b0;
+		else if (bus_cyc)
 			r_bank_valid <=((bank_active[i_wb_addr[9:8]][2])
 					&&(bank_row[i_wb_addr[9:8]]==i_wb_addr[22:10]));
 		else
@@ -216,8 +236,11 @@ module	wbsdram #(
 	reg	fwd_bank_valid;
 	initial	fwd_bank_valid = 0;
 	always @(posedge i_clk)
-		fwd_bank_valid <= ((bank_active[fwd_addr[9:8]][2])
-					&&(bank_row[fwd_addr[9:8]]==fwd_addr[22:10]));
+		if (i_rst)
+			fwd_bank_valid <= 0;
+		else
+			fwd_bank_valid <= ((bank_active[fwd_addr[9:8]][2])
+						&&(bank_row[fwd_addr[9:8]]==fwd_addr[22:10]));
 
 	assign	pending = (r_pending)&&(o_wb_stall);
 
@@ -255,7 +278,22 @@ module	wbsdram #(
 	initial bank_active[2] = 3'b000;
 	initial bank_active[3] = 3'b000;
 	always @(posedge i_clk)
-	if (maintenance_mode)
+	if (i_rst) begin
+		r_barrell_ack <= 0;
+		clocks_til_idle <= 3'h0;
+		o_wb_stall <= 1'b1;
+		o_ram_dmod <= `DMOD_GETINPUT;
+		nxt_dmod <= `DMOD_GETINPUT;
+		o_ram_cs_n  <= 1'b0;
+		o_ram_ras_n <= 1'b1;
+		o_ram_cas_n <= 1'b1;
+		o_ram_we_n  <= 1'b1;
+		o_ram_dqm   <= 2'b11;
+		bank_active[0] <= 3'b000;
+		bank_active[1] <= 3'b000;
+		bank_active[2] <= 3'b000;
+		bank_active[3] <= 3'b000;
+	end else if (maintenance_mode)
 	begin
 		bank_active[0] <= 0;
 		bank_active[1] <= 0;
@@ -446,7 +484,10 @@ module	wbsdram #(
 	initial	startup_idle = 16'd20500;
 	initial	startup_hold = 1'b1;
 	always @(posedge i_clk)
-		if (|startup_idle)
+		if (i_rst) begin
+			startup_idle <= 16'd20500;
+			startup_hold <= 1'b1;
+		end else if (|startup_idle)
 			startup_idle <= startup_idle - 1'b1;
 	always @(posedge i_clk)
 		startup_hold <= |startup_idle;
@@ -472,7 +513,18 @@ module	wbsdram #(
 	initial	m_ram_we_n  = 1'b1;
 	initial	m_ram_dmod  = `DMOD_GETINPUT;
 	always @(posedge i_clk)
-	begin
+	if (i_rst) begin
+		maintenance_mode <= 1'b1;
+		maintenance_clocks <= 4'hf;
+		maintenance_clocks_zero <= 1'b0;
+		m_ram_addr  <= { 3'b000, 1'b0, 2'b00, 3'b010, 1'b0, 3'b001 };
+		m_state <= `RAM_POWER_UP;
+		m_ram_cs_n  <= 1'b1;
+		m_ram_ras_n <= 1'b1;
+		m_ram_cas_n <= 1'b1;
+		m_ram_we_n  <= 1'b1;
+		m_ram_dmod  <= `DMOD_GETINPUT;
+	end else begin
 		if (!maintenance_clocks_zero)
 		begin
 			maintenance_clocks <= maintenance_clocks - 4'h1;

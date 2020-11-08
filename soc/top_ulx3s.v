@@ -50,8 +50,8 @@ module top_ulx3s(
 // 		inout [27:0] genio,
 // `endif
 		output [7:0] led,
-		inout [14:0] gn,
-		inout [14:0] gp,
+		inout [18:0] gn,
+		inout [18:0] gp,
 
 		// output uart_tx,
 		// input uart_rx,
@@ -139,6 +139,8 @@ module top_ulx3s(
 		inout [15:0] sdram_d,
 		inout wifi_en,
 		inout wifi_gpio0,
+
+		// output [3:0] gn // debug header
 	);
 
 	// enable the esp32 for easier reflashing
@@ -157,7 +159,7 @@ module top_ulx3s(
 
 	wire clk24m;
 	wire clk48m;
-	wire clk96m;
+	wire clk_48m_sdram;
 	wire rst_soc;
 
 	wire clkint;
@@ -224,7 +226,7 @@ module top_ulx3s(
 	soc soc (
 		.clk24m(clk24m),
 		.clk48m(clk48m),
-		.clk96m(clk96m),
+		.clk_48m_sdram(clk_48m_sdram),
 		.clkint(clkint),
 		.rst(rst_soc),
 		// .btn({1'b0, btn}),
@@ -344,6 +346,7 @@ module top_ulx3s(
 		.sdram_d_oe(sdram_d_oe),
 		.sdram_d_out(sdram_d_out),
 		.sdram_d_in(sdram_d_in),
+		.dbg(soc_dbg)
 	);
 
 	sysmgr sysmgr_I (
@@ -351,9 +354,11 @@ module top_ulx3s(
 		.rst_in(1'b0),
 		.clk_24m(clk24m),
 		.clk_48m(clk48m),
-		.clk_96m(clk96m),
+		.clk_48m_sdram(clk_48m_sdram),
 		.rst_out(rst_soc)
 	);
+	wire [3:0] soc_dbg;
+	assign gn[3:0] = soc_dbg; //{soc_dbg[3], soc_dbg[0], clk_48m_sdram, clk48m};
 
 	hdmi_encoder hdmi_encoder(
 		.clk_in(clk_25mhz),
@@ -383,8 +388,8 @@ module top_ulx3s(
 	for (i=0; i<30; i+=2) begin
 		// assign genio_in[i] = 0;
 		// assign genio_in[i+1] = 0;
-		TRELLIS_IO #(.DIR("BIDIR")) genio_tristate[i] (.B(gp[i/2]), .I(genio_out[i]), .O(genio_in[i]), .T(!genio_oe[i]));
-		TRELLIS_IO #(.DIR("BIDIR")) genio_tristate[i+1] (.B(gn[i/2+1]), .I(genio_out[i+1]), .O(genio_in[i+1]), .T(!genio_oe[i+1]));
+		TRELLIS_IO #(.DIR("BIDIR")) genio_tristate[i] (.B(gp[i/2 + 4]), .I(genio_out[i]), .O(genio_in[i]), .T(!genio_oe[i]));
+		TRELLIS_IO #(.DIR("BIDIR")) genio_tristate[i+1] (.B(gn[i/2 + 1 + 4]), .I(genio_out[i+1]), .O(genio_in[i+1]), .T(!genio_oe[i+1]));
 	end
 
 	wire [15:0] sdram_d_in;

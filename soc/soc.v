@@ -28,12 +28,11 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-`define USE_SDRAM
+// `define USE_SDRAM
 
 module soc(
 		input clk24m,
 		input clk48m,
-		input clk96m,
 		input rst,
 		input clkint, //internal clock of ecp5, <24MHz, used for rng
 		input [7:0] btn, 
@@ -67,8 +66,10 @@ module soc(
 		output sdram_d_oe,
 		output [15:0] sdram_d_out,
 		input [15:0] sdram_d_in,
+		input clk_48m_sdram,
 		`else
 		// PSRAM chips
+		input clk96m,
 		inout wire [3:0] psrama_sio,
 		inout wire psrama_nce,
 		inout wire psrama_sclk,
@@ -123,8 +124,8 @@ module soc(
 		output reg [7:0] pmod_out,
 		output reg [7:0] pmod_oe,
 		
-		output reg trace_en
-
+		output reg trace_en,
+		output [3:0] dbg
 	);
 
 	// assign led = {psram_select,usb_select,linerenderer_select,pic_select,mem_select,uart_select,misc_select,lcd_select, bus_error};
@@ -510,12 +511,11 @@ module soc(
 		end else if (mem_addr[31:28]=='h8) begin
 			audio_select = mem_valid;
 			mem_rdata = audio_rdata;
-		end else if (mem_addr[31:28]=='h9) begin
-			assert(0);
-			psram_select = mem_valid;
-			mem_rdata = psram_rdata;
+		// end else if (mem_addr[31:28]=='h9) begin
+		// 	assert(0);
+		// 	psram_select = mem_valid;
+		// 	mem_rdata = psram_rdata;
 		end else begin
-			assert(0);
 			//Bus error. Raise IRQ if memory is accessed.
 			mem_rdata = 'hDEADBEEF;
 			bus_error = mem_valid;
@@ -845,7 +845,6 @@ module soc(
 	wire [31:0] sdram_wb_data_ctl_out_sdram_in;
 	wire [31:0] sdram_wb_data_ctl_in_sdram_out;
 	wire [3:0] sdram_wb_sel;
-	wire sdram_wb_sel;
 	wire sdram_wb_ack;
 	wire sdram_wb_stall;
 
@@ -873,7 +872,8 @@ module soc(
 		.o_wb_data(sdram_wb_data_ctl_out_sdram_in),
 
 		.clk(clk48m),
-		.rst(rst)
+		.rst(rst),
+		.dbg(dbg)
 	);
 
 
@@ -889,6 +889,7 @@ module soc(
 	`endif
 	) wbsdram_I(
 		.i_clk(clk48m),
+		.i_rst(rst),
 		.i_wb_cyc(sdram_wb_cyc),
 		.i_wb_stb(sdram_wb_stb),
 		.i_wb_we(sdram_wb_we),
@@ -913,7 +914,7 @@ module soc(
 		.o_debug()
 		);
 
-		assign sdram_clk = clk48m;
+		assign sdram_clk = clk_48m_sdram;
 	
 	`else
 	

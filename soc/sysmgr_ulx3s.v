@@ -38,7 +38,8 @@ module sysmgr (
 	input  wire rst_in,
 	output wire clk_24m,
 	output wire clk_48m,
-	output wire clk_96m,
+	// output wire clk_96m,
+    output wire clk_48m_sdram,
 	output wire rst_out
 );
 
@@ -50,7 +51,8 @@ module sysmgr (
 
     wire clk_24m_i;
     wire clk_48m_i;
-    wire clk_96m_i;
+    // wire clk_96m_i;
+    wire clk_48m_sdram_i;
     wire rst_i;
     reg [7:0] rst_cnt;
 
@@ -75,12 +77,11 @@ module sysmgr (
         .OUTDIVIDER_MUXD("DIVD"),
         .CLKOP_FPHASE(0),
         .CLKOP_CPHASE(2),
-        .OUTDIVIDER_MUXA("DIVA"),
         .CLKOP_ENABLE("ENABLED"),
         .CLKOP_DIV(48),
         .CLKOS_ENABLE("ENABLED"),
-        .CLKOS_DIV(5),
-        .CLKOS_CPHASE(2),
+        .CLKOS_DIV(10),
+        .CLKOS_CPHASE(7),
         .CLKOS_FPHASE(0),
         .CLKOS2_ENABLE("ENABLED"),
         .CLKOS2_DIV(10),
@@ -98,7 +99,7 @@ module sysmgr (
         .CLKFB(clk_fb),
         .CLKINTFB(clk_fb),
         .CLKOP(),
-        .CLKOS(clk_96m_i),
+        .CLKOS(clk_48m_sdram_i),
         .CLKOS2(clk_48m_i),
         .CLKOS3(clk_24m_i),
         .RST(pll_reset),
@@ -114,7 +115,9 @@ module sysmgr (
 
     assign clk_24m = clk_24m_i;
     assign clk_48m = clk_48m_i;
-    assign clk_96m = clk_96m_i;
+    // assign clk_48m = clk_24m_i;
+    // assign clk_96m = clk_96m_i;
+    assign clk_48m_sdram = clk_48m_sdram_i;
 
     // PLL reset generation
     assign pll_reset = rst_in;
